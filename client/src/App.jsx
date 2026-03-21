@@ -1,9 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { 
   Menu, X, Lock, Info, UploadCloud, Cpu, FileText, 
   HeartPulse, Activity, List, AlertTriangle, TrendingUp, 
-  CheckCircle, BookOpen, Star, ChevronRight
+  CheckCircle, BookOpen, Star, ChevronRight, MessageSquare, BarChart2, Bell
 } from 'lucide-react';
+import Header from './components/Header';
+import AuthForm from './components/AuthForm';
+import OnboardingWizard from './components/OnboardingWizard';
+import Profile from './components/Profile';
+import Dashboard from './components/Dashboard';
 
 // --- ANIMATION WRAPPER ---
 const FadeIn = ({ children, delay = 0, className = '' }) => {
@@ -37,7 +43,7 @@ const FadeIn = ({ children, delay = 0, className = '' }) => {
   );
 };
 
-export default function SnjvniLandingPage() {
+function SnjvniLandingPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -49,47 +55,7 @@ export default function SnjvniLandingPage() {
         .font-body { font-family: 'Inter', sans-serif; }
       `}} />
 
-      {/* --- 1. NAVBAR --- */}
-      <nav className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md z-50 border-b border-[#D0F4F2]">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer">
-            <HeartPulse className="w-8 h-8 text-[#16AFA2]" />
-            <span className="font-heading font-bold text-2xl text-[#16AFA2] tracking-tight">
-              SNJVNI.ai
-            </span>
-          </div>
-
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-8">
-            <a href="#home" className="text-slate-600 hover:text-[#16AFA2] font-medium transition-colors">Home</a>
-            <a href="#how-it-works" className="text-slate-600 hover:text-[#16AFA2] font-medium transition-colors">How it Works</a>
-            <a href="#sample" className="text-slate-600 hover:text-[#16AFA2] font-medium transition-colors">Sample Report</a>
-            <button className="bg-[#16AFA2] hover:bg-[#0D7A75] text-white px-6 py-2.5 rounded-full font-medium transition-colors shadow-lg shadow-[#16AFA2]/20">
-              Analyze Report
-            </button>
-          </div>
-
-          {/* Mobile Toggle */}
-          <button 
-            className="md:hidden text-slate-800"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-
-        {/* Mobile Nav */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden bg-white border-b border-[#D0F4F2] px-6 py-4 flex flex-col gap-4 shadow-xl">
-            <a href="#home" className="text-slate-600 font-medium py-2 border-b border-slate-50">Home</a>
-            <a href="#how-it-works" className="text-slate-600 font-medium py-2 border-b border-slate-50">How it Works</a>
-            <a href="#sample" className="text-slate-600 font-medium py-2 border-b border-slate-50">Sample Report</a>
-            <button className="bg-[#16AFA2] text-white px-6 py-3 rounded-xl font-medium mt-2">
-              Analyze Report
-            </button>
-          </div>
-        )}
-      </nav>
+      
 
       {/* --- 2. HERO --- */}
       <section id="home" className="pt-32 pb-16 md:pt-40 md:pb-24 px-6 max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
@@ -108,7 +74,8 @@ export default function SnjvniLandingPage() {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#16AFA2] to-[#3EBFB9]">in plain English</span>
             </h1>
             <p className="text-lg md:text-xl text-slate-600 mb-8 max-w-2xl mx-auto lg:mx-0">
-              Upload your report, understand it in seconds. We analyze blood, urine, MRI, thyroid, and lipid reports to give you structured, AI-generated clarity.
+              Upload your report, understand it in seconds. We analyze blood, urine, MRI, thyroid, 
+              and lipid reports — then let you ask our AI assistant SNJVNI anything about your results.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
               <button className="w-full sm:w-auto bg-[#16AFA2] hover:bg-[#0D7A75] text-white px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-xl shadow-[#16AFA2]/30 flex items-center justify-center gap-2">
@@ -147,7 +114,7 @@ export default function SnjvniLandingPage() {
                 <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
                   <div className="flex justify-between items-end mb-2">
                     <h4 className="text-xs text-slate-400 font-bold uppercase tracking-wider">02 • Health Score</h4>
-                    <span className="font-heading font-bold text-[#16AFA2] text-xl">82<span className="text-sm text-slate-400">/100</span></span>
+                    <span className="font-heading font-bold text-[#16AFA2] text-xl">8.2<span className="text-sm text-slate-400">/10</span></span>
                   </div>
                   <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                     <div className="bg-[#16AFA2] w-[82%] h-full rounded-full"></div>
@@ -202,6 +169,9 @@ export default function SnjvniLandingPage() {
             </span>
             <span className="flex items-center gap-1.5 bg-white/50 px-3 py-1.5 rounded-full">
               <Info className="w-3.5 h-3.5" /> Not a substitute for medical advice
+            </span>
+            <span className="flex items-center gap-1.5 bg-white/50 px-3 py-1.5 rounded-full">
+              <Bell className="w-3.5 h-3.5" /> Critical values flagged instantly
             </span>
           </div>
         </div>
@@ -279,14 +249,15 @@ export default function SnjvniLandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[
               { num: '01', title: 'Patient Snapshot', desc: 'A quick summary of patient demographics and report scope.', icon: Activity },
-              { num: '02', title: 'Overall Health Score', desc: 'A calculated 0-100 score based on your vital biomarkers.', icon: HeartPulse },
+              { num: '02', title: 'Overall Health Score', desc: 'A calculated 0-10 score based on your vital biomarkers.', icon: HeartPulse },
               { num: '03', title: 'Biomarker Breakdown', desc: 'Table format of every tested value with simple explanations.', icon: List },
-              { num: '04', title: 'Visual Risk Dashboard', desc: 'Color-coded indicators for organ and system health risks.', icon: AlertTriangle },
-              { num: '05', title: 'Future Consequences', desc: 'Understand long-term impacts if markers remain unchecked.', icon: TrendingUp },
+              { num: '04', title: 'Visual Risk Dashboard', desc: 'Color-coded indicators for organ and system health risks.', icon: BarChart2 },
+              { num: '05', title: 'Future Consequences', desc: 'Understand long-term impacts if markers remain unchecked. Critical values trigger an immediate urgent alert.', icon: TrendingUp },
               { num: '06', title: 'Daily Habit Recs', desc: 'Actionable diet, sleep, and exercise tips based on results.', icon: CheckCircle },
               { num: '07', title: 'Glossary & Disclaimer', desc: 'Definitions of medical terms and important medical disclaimers.', icon: BookOpen },
+              { num: '08', title: 'Ask ION', desc: 'Chat with our AI assistant about any result in your report. Get instant, plain-English answers to your questions.', icon: MessageSquare }
             ].map((feature, i) => (
-              <FadeIn key={i} delay={i * 100} className={i === 6 ? "md:col-span-2 lg:col-span-3 xl:col-span-1" : ""}>
+              <FadeIn key={i} delay={i * 100}>
                 <div className="group bg-white p-6 rounded-2xl border border-[#D0F4F2] h-full transition-all duration-300 hover:shadow-xl hover:shadow-[#16AFA2]/10 hover:border-l-4 hover:border-l-[#16AFA2] border-l-4 border-l-transparent cursor-default">
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-[#A0E4E1] font-heading font-bold text-2xl group-hover:text-[#16AFA2] transition-colors">{feature.num}</span>
@@ -303,36 +274,83 @@ export default function SnjvniLandingPage() {
         </div>
       </section>
 
-      {/* --- 6. TESTIMONIALS --- */}
+      {/* --- 6. REAL EXAMPLE SECTION (REPLACED TESTIMONIALS) --- */}
       <section className="py-24 bg-white px-6">
-        <div className="max-w-7xl mx-auto">
-          <FadeIn>
-            <h2 className="font-heading text-3xl font-bold text-center text-[#073E3B] mb-12">
-              Trusted by patients worldwide
+        <div className="max-w-7xl mx-auto flex flex-col items-center">
+          <FadeIn className="text-center mb-12">
+            <h2 className="font-heading text-3xl md:text-4xl font-bold text-[#073E3B] mb-4">
+              See what your report becomes
             </h2>
+            <p className="text-slate-500 max-w-2xl mx-auto">
+              Here's a real example of what SNJVNI.ai generates from a standard blood test.
+            </p>
           </FadeIn>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { init: 'AK', name: 'Arjun K.', quote: "I finally understand my lipid profile without having to anxiously wait for my next doctor's appointment." },
-              { init: 'SM', name: 'Sarah M.', quote: "The daily habit recommendations based on my thyroid levels were spot on and incredibly helpful." },
-              { init: 'RP', name: 'Rahul P.', quote: "My parents' reports are always in medical jargon. SNJVNI explains it in Hindi perfectly for them." }
-            ].map((test, i) => (
-              <FadeIn key={i} delay={i * 150}>
-                <div className="bg-[#F0FAF9] p-8 rounded-2xl border border-[#D0F4F2] relative">
-                  <div className="flex text-amber-400 mb-4">
-                    {[1,2,3,4,5].map(star => <Star key={star} className="w-4 h-4 fill-current" />)}
+          
+          <FadeIn delay={150} className="w-full max-w-2xl">
+            <div className="bg-white border border-[#D0F4F2] rounded-3xl shadow-xl overflow-hidden flex flex-col">
+              <div className="bg-[#0A5C58] px-6 py-4 flex items-center justify-between">
+                <span className="text-white font-heading font-semibold">Example Output</span>
+                <span className="bg-[#16AFA2] text-white text-xs px-2 py-1 rounded">Blood Panel</span>
+              </div>
+              
+              <div className="p-6 md:p-8 space-y-6 bg-slate-50/50">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-4">
+                  <div>
+                    <span className="block text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Patient</span>
+                    <span className="text-sm font-semibold text-[#073E3B]">Male, 38 yrs | Blood Panel + Thyroid</span>
                   </div>
-                  <p className="text-slate-600 mb-6 italic">"{test.quote}"</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#16AFA2] rounded-full flex items-center justify-center text-white font-bold font-heading text-sm">
-                      {test.init}
-                    </div>
-                    <span className="font-bold text-[#0A5C58]">{test.name}</span>
+                  <div className="text-right">
+                    <span className="block text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Health Score</span>
+                    <span className="text-xl font-heading font-bold text-[#16AFA2]">
+                      6.4<span className="text-sm text-slate-400 font-normal">/10</span>
+                    </span>
                   </div>
                 </div>
-              </FadeIn>
-            ))}
-          </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Status Alert</span>
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded bg-amber-100 text-amber-700 border border-amber-200">
+                      Needs Attention
+                    </span>
+                  </div>
+                  
+                  <div className="bg-white border border-slate-100 rounded-xl shadow-sm text-sm overflow-hidden">
+                    <div className="grid grid-cols-3 bg-slate-50 border-b border-slate-100 p-3 font-semibold text-[#073E3B]">
+                      <span>Biomarker</span>
+                      <span>Value</span>
+                      <span className="text-right">Result</span>
+                    </div>
+                    <div className="grid grid-cols-3 p-3 border-b border-slate-50 items-center">
+                      <span className="text-slate-600">TSH</span>
+                      <span className="font-medium">6.8 mIU/L</span>
+                      <span className="text-right font-semibold text-rose-500">High</span>
+                    </div>
+                    <div className="grid grid-cols-3 p-3 border-b border-slate-50 items-center">
+                      <span className="text-slate-600">Haemoglobin</span>
+                      <span className="font-medium">11.2 g/dL</span>
+                      <span className="text-right font-semibold text-amber-500">Low</span>
+                    </div>
+                    <div className="grid grid-cols-3 p-3 items-center">
+                      <span className="text-slate-600">LDL</span>
+                      <span className="font-medium">92 mg/dL</span>
+                      <span className="text-right font-semibold text-emerald-500">Normal</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#F0FAF9] p-4 rounded-xl border border-[#D0F4F2]">
+                  <p className="text-sm text-[#0A5C58]">
+                    <span className="font-semibold text-[#073E3B]">Recommended:</span> 30 min sun daily · Reduce saturated fat · Sleep 8 hrs
+                  </p>
+                </div>
+                
+                <p className="text-xs text-center text-slate-400 mt-2">
+                  Sample output only. Your results will reflect your actual report.
+                </p>
+              </div>
+            </div>
+          </FadeIn>
         </div>
       </section>
 
@@ -351,7 +369,7 @@ export default function SnjvniLandingPage() {
             <p className="text-[#D0F4F2] text-lg md:text-xl mb-10 max-w-2xl mx-auto">
               Stop guessing. Upload your medical report today and get clear, structured, plain-English insights in seconds.
             </p>
-            <button className="bg-white text-[#16AFA2] hover:bg-slate-50 px-10 py-5 rounded-xl font-bold text-xl transition-all shadow-2xl flex items-center justify-center gap-3 mx-auto">
+            <button className="bg-white text-[#0F6E56] font-semibold px-10 py-6 rounded-xl text-xl transition-all duration-200 shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:scale-[1.02] flex items-center justify-center gap-3 mx-auto">
               <UploadCloud className="w-6 h-6" /> Upload Your Report Now
             </button>
             <p className="mt-6 text-sm text-[#A0E4E1]">No credit card required. Secure and private.</p>
@@ -364,11 +382,14 @@ export default function SnjvniLandingPage() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-8 border-b border-[#0A5C58] pb-8 mb-8">
           
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <HeartPulse className="w-6 h-6 text-[#16AFA2]" />
-              <span className="font-heading font-bold text-2xl text-white tracking-tight">
-                SNJVNI.ai
-              </span>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <HeartPulse className="w-6 h-6 text-[#16AFA2]" />
+                <span className="font-heading font-bold text-2xl text-white tracking-tight">
+                  SNJVNI.ai
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-400 font-medium ml-8 mt-1">Smart Health Intelligence</span>
             </div>
             <p className="text-sm text-[#A0E4E1]">AI-powered medical clarity.</p>
           </div>
@@ -401,5 +422,32 @@ export default function SnjvniLandingPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+function AppContent() {
+  const location = useLocation();
+  const hideHeader = ['/login', '/signup', '/onboarding'].includes(location.pathname);
+
+  return (
+    <>
+      {!hideHeader && <Header />}
+      <Routes>
+        <Route path="/" element={<SnjvniLandingPage />} />
+        <Route path="/login" element={<AuthForm />} />
+        <Route path="/signup" element={<AuthForm />} />
+        <Route path="/onboarding" element={<OnboardingWizard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/my-profile" element={<Profile />} />
+      </Routes>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
   );
 }
