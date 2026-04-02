@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SNJVNI.ai | Clinical Curator Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #FFFFFF; color: #0F172A; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
+        .custom-height { height: calc(100vh - 56px); }
+        .text-primary-dark { color: #0F172A; }
+        .text-secondary-slate { color: #475569; }
+        .text-muted-slate { color: #94A3B8; }
+        .bg-brand-teal { background-color: #0D9488; }
+        .text-brand-teal { color: #0D9488; }
+        .bg-dark-teal { background-color: #0F6E56; }
+        .text-dark-teal { color: #0F6E56; }
+        .bg-teal-light { background-color: #F0FDFA; }
+        .border-slate-200 { border-color: #E2E8F0; }
+    </style>
+</head>
+<body class="antialiased overflow-hidden">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 left-0 right-0 z-50 h-[56px] bg-white border-b border-slate-200 flex items-center justify-between px-6">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 bg-teal-light rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-brand-teal text-xl" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</div>
+<span class="text-lg font-bold tracking-tight text-primary-dark">SNJVNI.ai</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-2 px-4 py-1.5 bg-dark-teal text-white rounded-lg text-sm font-semibold transition-colors hover:bg-teal-800">
+<span class="material-symbols-outlined text-sm">share</span>
+<span>Share</span>
+</button>
+<div class="flex items-center gap-3">
+<span class="text-sm font-medium text-secondary-slate">Vaibhav</span>
+<div class="w-8 h-8 rounded-full bg-dark-teal flex items-center justify-center text-white font-bold text-xs">
+                VK
+            </div>
+</div>
+</div>
+</header>
+<!-- Main Content Layout -->
+<main class="mt-[56px] flex w-full custom-height overflow-hidden bg-white">
+<!-- Column 1: Patient & Glossary (Left) -->
+<aside class="w-[220px] flex-shrink-0 bg-white border-r border-slate-200 flex flex-col overflow-hidden">
+<!-- Patient Card -->
+<div class="p-5 border-b border-slate-200">
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-full bg-dark-teal flex items-center justify-center text-white font-bold text-sm">RK</div>
+<div class="bg-[#FFFBEB] text-[#92400E] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Warning</div>
+</div>
+<div class="mb-4">
+<h2 class="text-sm font-semibold text-primary-dark">Rahul Kumar</h2>
+<p class="text-xs text-muted-slate">32 • Male</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-11 h-11 flex items-center justify-center rounded-full border-2 border-[#D97706] text-sm font-bold text-primary-dark">
+                    6.2
+                </div>
+<div>
+<p class="text-[9px] font-bold text-muted-slate uppercase tracking-wider">Health Score</p>
+<p class="text-[11px] font-semibold text-[#D97706]">Needs Attention</p>
+</div>
+</div>
+</div>
+<!-- Scrollable Glossary -->
+<div class="flex-1 overflow-y-auto px-5 py-4">
+<h3 class="text-[9px] font-bold text-muted-slate uppercase tracking-widest mb-4">Glossary</h3>
+<div class="space-y-4">
+<div>
+<p class="text-[11px] font-semibold text-primary-dark mb-0.5">TSH</p>
+<p class="text-[11px] text-muted-slate leading-normal">A pituitary hormone that stimulates the thyroid gland.</p>
+</div>
+<div>
+<p class="text-[11px] font-semibold text-primary-dark mb-0.5">Haemoglobin</p>
+<p class="text-[11px] text-muted-slate leading-normal">Iron-rich protein in red blood cells that carries oxygen.</p>
+</div>
+<div>
+<p class="text-[11px] font-semibold text-primary-dark mb-0.5">LDL</p>
+<p class="text-[11px] text-muted-slate leading-normal">'Bad' cholesterol that can lead to plaque buildup in arteries.</p>
+</div>
+<div>
+<p class="text-[11px] font-semibold text-primary-dark mb-0.5">Vitamin D</p>
+<p class="text-[11px] text-muted-slate leading-normal">Nutrient essential for bone health and immune function.</p>
+</div>
+<div>
+<p class="text-[11px] font-semibold text-primary-dark mb-0.5">Glucose</p>
+<p class="text-[11px] text-muted-slate leading-normal">Primary sugar found in blood; provides energy for cells.</p>
+</div>
+</div>
+</div>
+<!-- Fixed Chat Box -->
+<div class="p-4 bg-white border-t border-slate-200">
+<div class="flex items-center gap-2 bg-[#F8FAFC] p-1.5 rounded-lg border border-slate-200">
+<input class="flex-1 bg-transparent border-none text-[11px] focus:ring-0 placeholder:text-muted-slate px-2" placeholder="Ask SNJVNI..." type="text"/>
+<button class="w-7 h-7 bg-dark-teal text-white rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">send</span>
+</button>
+</div>
+</div>
+</aside>
+<!-- Column 2: Analysis & Records (Center) -->
+<section class="flex-1 overflow-y-auto bg-white">
+<div class="max-w-4xl mx-auto p-10">
+<!-- Header -->
+<header class="mb-8 flex justify-between items-end">
+<div>
+<p class="text-[10px] font-bold text-brand-teal tracking-widest uppercase mb-1">Diagnostic Report</p>
+<h1 class="text-xl font-bold text-primary-dark tracking-tight">Complete Blood Count + Thyroid Panel</h1>
+</div>
+<div class="text-right">
+<p class="text-[10px] font-bold text-muted-slate uppercase mb-1">Report Date</p>
+<p class="text-sm font-semibold text-primary-dark">March 19, 2026</p>
+</div>
+</header>
+<!-- Risk Alert Banner -->
+<div class="bg-[#FFFBEB] border-l-[3px] border-[#D97706] p-4 rounded-r-lg mb-8 flex items-start gap-3">
+<span class="material-symbols-outlined text-[#D97706] text-xl mt-0.5">error</span>
+<div>
+<p class="text-sm font-bold text-[#92400E]">Immediate Action Required: Critical TSH Elevation</p>
+<p class="text-xs text-[#B45309] mt-0.5 leading-relaxed">Your thyroid levels suggest Primary Hypothyroidism. Schedule a consultation with an Endocrinologist within 48 hours.</p>
+</div>
+</div>
+<!-- Biomarker Table -->
+<div class="border border-slate-200 rounded-lg overflow-hidden mb-8 bg-white">
+<table class="w-full text-left border-collapse">
+<thead class="bg-[#F8FAFC] border-b border-slate-200">
+<tr>
+<th class="px-6 py-3 text-[10px] font-bold text-muted-slate uppercase tracking-wider">Biomarker</th>
+<th class="px-6 py-3 text-[10px] font-bold text-muted-slate uppercase tracking-wider">Value</th>
+<th class="px-6 py-3 text-[10px] font-bold text-muted-slate uppercase tracking-wider">Range</th>
+<th class="px-6 py-3 text-[10px] font-bold text-muted-slate uppercase tracking-wider text-right">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100">
+<!-- Row 1 -->
+<tr class="h-[56px] bg-white">
+<td class="px-6">
+<p class="text-[13px] font-semibold text-primary-dark">TSH</p>
+<p class="text-[10px] text-muted-slate">Endocrine System</p>
+</td>
+<td class="px-6 text-[13px] font-bold text-[#DC2626]">12.4 uIU/mL</td>
+<td class="px-6 text-[11px] text-secondary-slate">0.45 - 4.50</td>
+<td class="px-6 text-right">
+<span class="px-2 py-0.5 bg-[#FEF2F2] text-[#991B1B] text-[10px] font-bold rounded uppercase">Critical</span>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="h-[56px] bg-white">
+<td class="px-6">
+<p class="text-[13px] font-semibold text-primary-dark">Haemoglobin</p>
+<p class="text-[10px] text-muted-slate">Hematologic</p>
+</td>
+<td class="px-6 text-[13px] font-bold text-[#D97706]">11.2 g/dL</td>
+<td class="px-6 text-[11px] text-secondary-slate">13.5 - 17.5</td>
+<td class="px-6 text-right">
+<span class="px-2 py-0.5 bg-[#FFFBEB] text-[#92400E] text-[10px] font-bold rounded uppercase">Low</span>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="h-[56px] bg-white">
+<td class="px-6">
+<p class="text-[13px] font-semibold text-primary-dark">LDL Cholesterol</p>
+<p class="text-[10px] text-muted-slate">Cardiovascular</p>
+</td>
+<td class="px-6 text-[13px] font-bold text-[#D97706]">165 mg/dL</td>
+<td class="px-6 text-[11px] text-secondary-slate">&lt; 100</td>
+<td class="px-6 text-right">
+<span class="px-2 py-0.5 bg-[#FFFBEB] text-[#92400E] text-[10px] font-bold rounded uppercase">High</span>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="h-[56px] bg-white">
+<td class="px-6">
+<p class="text-[13px] font-semibold text-primary-dark">Glucose (Fasting)</p>
+<p class="text-[10px] text-muted-slate">Metabolic</p>
+</td>
+<td class="px-6 text-[13px] font-bold text-primary-dark">92 mg/dL</td>
+<td class="px-6 text-[11px] text-secondary-slate">70 - 99</td>
+<td class="px-6 text-right">
+<span class="px-2 py-0.5 bg-[#ECFDF5] text-[#065F46] text-[10px] font-bold rounded uppercase">Normal</span>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="h-[56px] bg-white">
+<td class="px-6">
+<p class="text-[13px] font-semibold text-primary-dark">Creatinine</p>
+<p class="text-[10px] text-muted-slate">Renal Function</p>
+</td>
+<td class="px-6 text-[13px] font-bold text-primary-dark">0.9 mg/dL</td>
+<td class="px-6 text-[11px] text-secondary-slate">0.7 - 1.3</td>
+<td class="px-6 text-right">
+<span class="px-2 py-0.5 bg-[#ECFDF5] text-[#065F46] text-[10px] font-bold rounded uppercase">Normal</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- In-depth Insights -->
+<div class="grid grid-cols-2 gap-6 pb-12">
+<div class="p-5 bg-white border-l-[3px] border-[#DC2626] border-y border-r border-slate-200 rounded-r-lg">
+<div class="flex items-center gap-3 mb-3">
+<div class="w-8 h-8 bg-[#FEF2F2] rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-[#DC2626] text-lg">analytics</span>
+</div>
+<h4 class="text-[13px] font-semibold text-primary-dark">The TSH Correlation</h4>
+</div>
+<p class="text-[12px] text-secondary-slate leading-relaxed">Your TSH of 12.4 is significantly elevated, indicating your pituitary gland is overworking to trigger a sluggish thyroid.</p>
+</div>
+<div class="p-5 bg-white border-l-[3px] border-[#D97706] border-y border-r border-slate-200 rounded-r-lg">
+<div class="flex items-center gap-3 mb-3">
+<div class="w-8 h-8 bg-[#FFFBEB] rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-[#D97706] text-lg">bloodtype</span>
+</div>
+<h4 class="text-[13px] font-semibold text-primary-dark">Iron &amp; LDL Dynamic</h4>
+</div>
+<p class="text-[12px] text-secondary-slate leading-relaxed">The mild anemia combined with elevated LDL suggests a metabolic slowdown. Thyroid function issues often impact LDL clearance.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Column 3: Predictions & Lifestyle (Right) -->
+<aside class="w-[240px] flex-shrink-0 bg-white border-l border-slate-200 flex flex-col p-6 space-y-8 overflow-y-auto">
+<!-- Visual Risk Stack -->
+<div>
+<h3 class="text-[10px] font-bold text-muted-slate uppercase tracking-widest mb-5">Risk Magnitude</h3>
+<div class="space-y-5">
+<div>
+<div class="flex justify-between text-[10px] font-bold mb-1.5">
+<span class="text-primary-dark uppercase">Thyroid</span>
+<span class="text-[#DC2626]">8/10</span>
+</div>
+<div class="w-full h-1 bg-slate-100 rounded-full">
+<div class="h-full bg-[#DC2626] rounded-full" style="width: 80%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[10px] font-bold mb-1.5">
+<span class="text-primary-dark uppercase">Metabolic</span>
+<span class="text-[#D97706]">5/10</span>
+</div>
+<div class="w-full h-1 bg-slate-100 rounded-full">
+<div class="h-full bg-[#D97706] rounded-full" style="width: 50%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[10px] font-bold mb-1.5">
+<span class="text-primary-dark uppercase">Renal</span>
+<span class="text-[#0F6E56]">2/10</span>
+</div>
+<div class="w-full h-1 bg-slate-100 rounded-full">
+<div class="h-full bg-[#0F6E56] rounded-full" style="width: 20%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Future Consequences Timeline -->
+<div>
+<h3 class="text-[10px] font-bold text-muted-slate uppercase tracking-widest mb-5">Future Projection</h3>
+<div class="relative ml-1 space-y-6">
+<div class="relative pl-6">
+<div class="absolute left-0 top-1 w-2 h-2 rounded-full bg-[#D97706]"></div>
+<p class="text-[10px] font-bold text-[#D97706] mb-0.5">6 MONTHS</p>
+<p class="text-[11px] text-secondary-slate">Increased risk of chronic fatigue and weight gain.</p>
+</div>
+<div class="relative pl-6">
+<div class="absolute left-0 top-1 w-2 h-2 rounded-full bg-[#DC2626]"></div>
+<p class="text-[10px] font-bold text-[#DC2626] mb-0.5">1 YEAR</p>
+<p class="text-[11px] text-secondary-slate">Potential for secondary hypertension due to LDL.</p>
+</div>
+<div class="relative pl-6">
+<div class="absolute left-0 top-1 w-2 h-2 rounded-full bg-[#991B1B]"></div>
+<p class="text-[10px] font-bold text-[#991B1B] mb-0.5">5 YEARS</p>
+<p class="text-[11px] text-secondary-slate">High probability of cardiovascular complications.</p>
+</div>
+</div>
+</div>
+<!-- Daily Habit Prescriptions -->
+<div>
+<h3 class="text-[10px] font-bold text-muted-slate uppercase tracking-widest mb-4">Daily Precision Habits</h3>
+<div class="grid grid-cols-2 gap-3">
+<div class="p-3 bg-[#F8FAFC] rounded-lg flex flex-col items-center text-center">
+<div class="w-8 h-8 bg-[#F0FDFA] rounded-full flex items-center justify-center mb-2">
+<span class="material-symbols-outlined text-brand-teal text-base">dark_mode</span>
+</div>
+<p class="text-[9px] font-bold text-primary-dark leading-tight uppercase">8h Sleep</p>
+</div>
+<div class="p-3 bg-[#F8FAFC] rounded-lg flex flex-col items-center text-center">
+<div class="w-8 h-8 bg-[#F0FDFA] rounded-full flex items-center justify-center mb-2">
+<span class="material-symbols-outlined text-brand-teal text-base">no_meals</span>
+</div>
+<p class="text-[9px] font-bold text-primary-dark leading-tight uppercase">Less Sat Fat</p>
+</div>
+<div class="p-3 bg-[#F8FAFC] rounded-lg flex flex-col items-center text-center">
+<div class="w-8 h-8 bg-[#F0FDFA] rounded-full flex items-center justify-center mb-2">
+<span class="material-symbols-outlined text-brand-teal text-base">wb_sunny</span>
+</div>
+<p class="text-[9px] font-bold text-primary-dark leading-tight uppercase">20m Sunlight</p>
+</div>
+<div class="p-3 bg-[#F8FAFC] rounded-lg flex flex-col items-center text-center">
+<div class="w-8 h-8 bg-[#F0FDFA] rounded-full flex items-center justify-center mb-2">
+<span class="material-symbols-outlined text-brand-teal text-base">eco</span>
+</div>
+<p class="text-[9px] font-bold text-primary-dark leading-tight uppercase">Leafy Greens</p>
+</div>
+</div>
+</div>
+</aside>
+</main>
+</body></html>

@@ -10,6 +10,7 @@ import AuthForm from './components/AuthForm';
 import OnboardingWizard from './components/OnboardingWizard';
 import Profile from './components/Profile';
 import Dashboard from './components/Dashboard';
+import ReportDashboard from './components/ReportDashboard';
 
 // --- ANIMATION WRAPPER ---
 const FadeIn = ({ children, delay = 0, className = '' }) => {
@@ -427,7 +428,7 @@ function SnjvniLandingPage() {
 
 function AppContent() {
   const location = useLocation();
-  const hideHeader = ['/login', '/signup', '/onboarding'].includes(location.pathname);
+  const hideHeader = ['/login', '/signup', '/onboarding'].includes(location.pathname) || location.pathname.startsWith('/report');
 
   return (
     <>
@@ -438,6 +439,7 @@ function AppContent() {
         <Route path="/signup" element={<AuthForm />} />
         <Route path="/onboarding" element={<OnboardingWizard />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/report/:id" element={<ReportDashboard />} />
         <Route path="/my-profile" element={<Profile />} />
       </Routes>
     </>
