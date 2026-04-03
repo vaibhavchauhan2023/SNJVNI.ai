@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { 
-  Menu, X, Lock, Info, UploadCloud, Cpu, FileText, 
-  HeartPulse, Activity, List, AlertTriangle, TrendingUp, 
+import {
+  Menu, X, Lock, Info, UploadCloud, Cpu, FileText,
+  HeartPulse, Activity, List, AlertTriangle, TrendingUp,
   CheckCircle, BookOpen, Star, ChevronRight, MessageSquare, BarChart2, Bell
 } from 'lucide-react';
 import Header from './components/Header';
@@ -11,6 +11,7 @@ import OnboardingWizard from './components/OnboardingWizard';
 import Profile from './components/Profile';
 import Dashboard from './components/Dashboard';
 import ReportDashboard from './components/ReportDashboard';
+import ProtectedRoute from './components/ProtectedRoute'
 
 // --- ANIMATION WRAPPER ---
 const FadeIn = ({ children, delay = 0, className = '' }) => {
@@ -34,9 +35,8 @@ const FadeIn = ({ children, delay = 0, className = '' }) => {
   return (
     <div
       ref={ref}
-      className={`transition-all duration-700 ease-out ${
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-      } ${className}`}
+      className={`transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+        } ${className}`}
       style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
@@ -50,13 +50,14 @@ function SnjvniLandingPage() {
   return (
     <div className="min-h-screen bg-white text-slate-800 font-body overflow-x-hidden">
       {/* --- INJECTED STYLES FOR FONTS & ANIMATIONS --- */}
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap');
         .font-heading { font-family: 'Poppins', sans-serif; }
         .font-body { font-family: 'Inter', sans-serif; }
       `}} />
 
-      
+
 
       {/* --- 2. HERO --- */}
       <section id="home" className="pt-32 pb-16 md:pt-40 md:pb-24 px-6 max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
@@ -71,11 +72,11 @@ function SnjvniLandingPage() {
               AI-Powered Medical Insights
             </div>
             <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#073E3B] leading-tight mb-6">
-              Understand your medical report — <br className="hidden lg:block"/>
+              Understand your medical report — <br className="hidden lg:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#16AFA2] to-[#3EBFB9]">in plain English</span>
             </h1>
             <p className="text-lg md:text-xl text-slate-600 mb-8 max-w-2xl mx-auto lg:mx-0">
-              Upload your report, understand it in seconds. We analyze blood, urine, MRI, thyroid, 
+              Upload your report, understand it in seconds. We analyze blood, urine, MRI, thyroid,
               and lipid reports — then let you ask our AI assistant SNJVNI anything about your results.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
@@ -99,7 +100,7 @@ function SnjvniLandingPage() {
                 <span className="text-white font-heading font-semibold">Report Analysis</span>
                 <span className="bg-[#16AFA2] text-white text-xs px-2 py-1 rounded">Complete</span>
               </div>
-              
+
               {/* Mock Body */}
               <div className="p-6 space-y-5 bg-slate-50/50">
                 {/* 01 Patient Snapshot */}
@@ -193,7 +194,7 @@ function SnjvniLandingPage() {
           <div className="relative">
             {/* Desktop Connector Line */}
             <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#6ECFCA] to-transparent -translate-y-1/2 z-0"></div>
-            
+
             <div className="flex flex-col md:flex-row gap-12 relative z-10">
               {/* Step 1 */}
               <FadeIn delay={100} className="flex-1">
@@ -286,14 +287,14 @@ function SnjvniLandingPage() {
               Here's a real example of what SNJVNI.ai generates from a standard blood test.
             </p>
           </FadeIn>
-          
+
           <FadeIn delay={150} className="w-full max-w-2xl">
             <div className="bg-white border border-[#D0F4F2] rounded-3xl shadow-xl overflow-hidden flex flex-col">
               <div className="bg-[#0A5C58] px-6 py-4 flex items-center justify-between">
                 <span className="text-white font-heading font-semibold">Example Output</span>
                 <span className="bg-[#16AFA2] text-white text-xs px-2 py-1 rounded">Blood Panel</span>
               </div>
-              
+
               <div className="p-6 md:p-8 space-y-6 bg-slate-50/50">
                 <div className="flex justify-between items-center border-b border-slate-200 pb-4">
                   <div>
@@ -315,7 +316,7 @@ function SnjvniLandingPage() {
                       Needs Attention
                     </span>
                   </div>
-                  
+
                   <div className="bg-white border border-slate-100 rounded-xl shadow-sm text-sm overflow-hidden">
                     <div className="grid grid-cols-3 bg-slate-50 border-b border-slate-100 p-3 font-semibold text-[#073E3B]">
                       <span>Biomarker</span>
@@ -345,7 +346,7 @@ function SnjvniLandingPage() {
                     <span className="font-semibold text-[#073E3B]">Recommended:</span> 30 min sun daily · Reduce saturated fat · Sleep 8 hrs
                   </p>
                 </div>
-                
+
                 <p className="text-xs text-center text-slate-400 mt-2">
                   Sample output only. Your results will reflect your actual report.
                 </p>
@@ -361,7 +362,7 @@ function SnjvniLandingPage() {
         {/* Decorative background circles */}
         <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#073E3B]/20 rounded-full blur-3xl translate-x-1/3 translate-y-1/3"></div>
-        
+
         <div className="relative z-10 max-w-4xl mx-auto text-center">
           <FadeIn>
             <h2 className="font-heading text-4xl md:text-5xl font-bold text-white mb-6">
@@ -381,7 +382,7 @@ function SnjvniLandingPage() {
       {/* --- 8. FOOTER --- */}
       <footer className="bg-[#073E3B] text-slate-300 py-12 px-6 border-t-4 border-[#16AFA2]">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-8 border-b border-[#0A5C58] pb-8 mb-8">
-          
+
           <div className="flex flex-col gap-4">
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
@@ -399,7 +400,7 @@ function SnjvniLandingPage() {
             <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
             <a href="#" className="hover:text-white transition-colors">Contact/Support</a>
-            
+
             <div className="relative mt-2 md:mt-0">
               <select className="appearance-none bg-[#0A5C58] border border-[#16AFA2] text-white rounded-lg pl-4 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-[#6ECFCA] cursor-pointer">
                 <option value="en">English</option>
@@ -408,7 +409,7 @@ function SnjvniLandingPage() {
                 <option value="bn">Bengali</option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#A0E4E1]">
-                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
               </div>
             </div>
           </div>
@@ -417,7 +418,7 @@ function SnjvniLandingPage() {
         <div className="max-w-7xl mx-auto text-xs text-center md:text-left text-[#7AB8B5]">
           <p>© {new Date().getFullYear()} SNJVNI.ai. All rights reserved.</p>
           <p className="mt-2 flex items-center justify-center md:justify-start gap-1">
-            <AlertTriangle className="w-3.5 h-3.5" /> 
+            <AlertTriangle className="w-3.5 h-3.5" />
             <strong>Disclaimer:</strong> This tool is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician.
           </p>
         </div>
@@ -438,9 +439,18 @@ function AppContent() {
         <Route path="/login" element={<AuthForm />} />
         <Route path="/signup" element={<AuthForm />} />
         <Route path="/onboarding" element={<OnboardingWizard />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/report/:id" element={<ReportDashboard />} />
-        <Route path="/my-profile" element={<Profile />} />
+
+        <Route path="/dashboard" element={
+          <ProtectedRoute><Dashboard /></ProtectedRoute>
+        } />
+
+        <Route path="/report/:id" element={
+          <ProtectedRoute><ReportDashboard /></ProtectedRoute>
+        } />
+
+        <Route path="/my-profile" element={
+          <ProtectedRoute><Profile /></ProtectedRoute>
+        } />
       </Routes>
     </>
   );

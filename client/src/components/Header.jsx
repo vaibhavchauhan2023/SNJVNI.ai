@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HeartPulse, Menu, X, UploadCloud, Bell, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Header() {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    () => localStorage.getItem('snjvni-token') === 'true'
-  );
+  const { user, signOut } = useAuth();
+  const isAuthenticated = !!user;
+
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   
@@ -15,6 +16,17 @@ export default function Header() {
 
   const notifRef = useRef(null);
   const avatarRef = useRef(null);
+
+  // Derive display name and initials from Supabase user
+  const fullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+  const displayEmail = user?.email || '';
+  const avatarUrl = user?.user_metadata?.avatar_url || null;
+  const initials = fullName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 
   // Scroll effect for shadow
   useEffect(() => {
@@ -39,14 +51,7 @@ export default function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Sync token changes from other tabs if needed, though simple state works here
-  useEffect(() => {
-    const handleStorage = () => setIsAuthenticated(localStorage.getItem('snjvni-token') === 'true');
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
-
-  // Handlers for mock auth
+  // Handlers
   const handleLogin = () => {
     navigate('/login');
     setIsMobileOpen(false);
@@ -57,11 +62,11 @@ export default function Header() {
     setIsMobileOpen(false);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('snjvni-token');
-    setIsAuthenticated(false);
+  const handleLogout = async () => {
+    await signOut();
     setAvatarOpen(false);
     setIsMobileOpen(false);
+    navigate('/');
   };
 
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
@@ -184,16 +189,20 @@ export default function Header() {
               <div className="relative flex items-center" ref={avatarRef}>
                 <button
                   onClick={() => setAvatarOpen(!avatarOpen)}
-                  className="w-[36px] h-[36px] bg-[#0F6E56] rounded-full flex items-center justify-center text-white font-semibold text-[14px] hover:ring-2 ring-offset-2 ring-[#0F6E56] transition-all"
+                  className="w-[36px] h-[36px] bg-[#0F6E56] rounded-full flex items-center justify-center text-white font-semibold text-[14px] hover:ring-2 ring-offset-2 ring-[#0F6E56] transition-all overflow-hidden"
                 >
-                  V
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={fullName} className="w-full h-full object-cover rounded-full" />
+                  ) : (
+                    initials
+                  )}
                 </button>
 
                 {avatarOpen && (
                   <div className="absolute top-[120%] right-0 w-[200px] bg-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-slate-100 py-2 flex flex-col z-50">
                     <div className="px-4 py-3 border-b border-slate-100 flex flex-col mb-1">
-                      <span className="font-bold text-slate-800 text-sm">Vaibhav Chauhan</span>
-                      <span className="text-xs text-slate-500 truncate">vaibhav@example.com</span>
+                      <span className="font-bold text-slate-800 text-sm">{fullName}</span>
+                      <span className="text-xs text-slate-500 truncate">{displayEmail}</span>
                     </div>
                     {['My Profile', 'Settings', 'Doctor Export', 'Help'].map((item) => (
                       <a key={item} href={`/${item.toLowerCase().replace(/ /g, '-')}`} className="px-4 py-2 text-sm text-[#374151] hover:bg-slate-50 hover:text-[#0F6E56] transition-colors">

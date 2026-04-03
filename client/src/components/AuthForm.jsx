@@ -1,31 +1,37 @@
 import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, User, Mail, Lock, HeartPulse, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
-const AuthForm = ({ onLogin }) => {
+const AuthForm = () => {
   const [isSignup, setIsSignup] = useState(window.location.pathname === '/signup');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [confirmError, setConfirmError] = useState("");
+  const [authError, setAuthError] = useState("");
   const [password, setPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
   const navigate = useNavigate();
+  const { signIn, signUp, signInWithGoogle } = useAuth();
 
   useEffect(() => {
     setIsSignup(window.location.pathname === '/signup');
   }, [window.location.pathname]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const email = e.target.email.value;
     const passwordInput = e.target.password.value;
     const confirmPassword = e.target.confirmPassword?.value;
 
     setPasswordError("");
     setConfirmError("");
+    setAuthError("");
     
     if (isSignup) {
       let hasError = false;
@@ -44,23 +50,57 @@ const AuthForm = ({ onLogin }) => {
 
     setLoading(true);
 
-    setTimeout(() => {
-      setLoading(false);
-      localStorage.setItem('snjvni-token', 'true');
-      const firstName = e.target.firstName?.value;
-      if (firstName) {
-        localStorage.setItem('snjvni-name', firstName);
-      }
-      window.dispatchEvent(new Event('storage'));
-      
+    try {
       if (isSignup) {
+        const firstName = e.target.firstName?.value || '';
+        const lastName = e.target.lastName?.value || '';
+        const fullName = `${firstName} ${lastName}`.trim();
+
+        const { data, error } = await signUp(email, passwordInput, fullName);
+        
+        if (error) {
+          setAuthError(error.message);
+          setLoading(false);
+          return;
+        }
+
+        // Store name for onboarding use
+        if (firstName) {
+          localStorage.setItem('snjvni-name', firstName);
+        }
+
         navigate('/onboarding');
       } else {
+        const { data, error } = await signIn(email, passwordInput);
+        
+        if (error) {
+          setAuthError(error.message);
+          setLoading(false);
+          return;
+        }
+
         navigate('/dashboard');
       }
-      
-      if (onLogin) onLogin();
-    }, 1000);
+    } catch (err) {
+      setAuthError('An unexpected error occurred. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    setAuthError("");
+    try {
+      const { error } = await signInWithGoogle();
+      if (error) {
+        setAuthError(error.message);
+        setGoogleLoading(false);
+      }
+      // OAuth redirects, so no navigation needed here
+    } catch (err) {
+      setAuthError('Google sign-in failed. Please try again.');
+      setGoogleLoading(false);
+    }
   };
 
   const getStrength = () => {
@@ -148,11 +188,21 @@ const AuthForm = ({ onLogin }) => {
             </p>
           </div>
 
+          {/* Auth Error Banner */}
+          {authError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2">
+              <svg className="w-4 h-4 mt-0.5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{authError}</span>
+            </div>
+          )}
+
           {/* Tab Switcher */}
           <div className="flex w-full mb-8 relative">
             <button 
               type="button" 
-              onClick={() => setIsSignup(false)}
+              onClick={() => { setIsSignup(false); setAuthError(""); }}
               className={`flex-1 pb-3 text-center text-[15px] transition-colors relative z-10 
               ${!isSignup ? 'text-[#0F6E56] font-semibold border-b-2 border-[#0F6E56]' : 'text-[#9CA3AF] font-normal hover:text-[#374151]'}`}
             >
@@ -160,7 +210,7 @@ const AuthForm = ({ onLogin }) => {
             </button>
             <button 
               type="button" 
-              onClick={() => setIsSignup(true)}
+              onClick={() => { setIsSignup(true); setAuthError(""); }}
               className={`flex-1 pb-3 text-center text-[15px] transition-colors relative z-10 
               ${isSignup ? 'text-[#0F6E56] font-semibold border-b-2 border-[#0F6E56]' : 'text-[#9CA3AF] font-normal hover:text-[#374151]'}`}
             >
@@ -375,21 +425,26 @@ const AuthForm = ({ onLogin }) => {
           {/* Social Auth */}
           <button
             type="button"
-            onClick={() => {
-              localStorage.setItem('snjvni-token', 'true');
-              window.dispatchEvent(new Event('storage'));
-              navigate('/dashboard');
-              if (onLogin) onLogin();
-            }}
-            className="flex w-full items-center justify-center gap-3 rounded-[10px] border border-[#D1D5DB] h-[46px] text-[14px] font-medium text-[#374151] transition-all hover:bg-[#F9FAFB] active:scale-[0.99]"
+            disabled={googleLoading}
+            onClick={handleGoogleSignIn}
+            className="flex w-full items-center justify-center gap-3 rounded-[10px] border border-[#D1D5DB] h-[46px] text-[14px] font-medium text-[#374151] transition-all hover:bg-[#F9FAFB] active:scale-[0.99] disabled:opacity-70 disabled:pointer-events-none"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-[18px] w-[18px]">
-              <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.6 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z" />
-              <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
-              <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.5-5.3l-6.2-5.2C29.3 35.1 26.8 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.5 16.2 44 24 44z" />
-              <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1.1 3.1-3.3 5.5-6.2 7l6.2 5.2C39.2 36.7 44 31 44 24c0-1.3-.1-2.3-.4-3.5z" />
-            </svg>
-            Continue with Google
+            {googleLoading ? (
+              <>
+                <Loader2 className="animate-spin w-[18px] h-[18px]" />
+                Connecting...
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-[18px] w-[18px]">
+                  <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.6 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z" />
+                  <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+                  <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.5-5.3l-6.2-5.2C29.3 35.1 26.8 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.5 16.2 44 24 44z" />
+                  <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1.1 3.1-3.3 5.5-6.2 7l6.2 5.2C39.2 36.7 44 31 44 24c0-1.3-.1-2.3-.4-3.5z" />
+                </svg>
+                Continue with Google
+              </>
+            )}
           </button>
 
         </div>
