@@ -91,12 +91,13 @@ const AuthForm = () => {
     setGoogleLoading(true);
     setAuthError("");
     try {
-      const { error } = await signInWithGoogle();
+      const redirectPath = isSignup ? '/onboarding' : '/dashboard';
+      const { error } = await signInWithGoogle(redirectPath);
       if (error) {
         setAuthError(error.message);
         setGoogleLoading(false);
       }
-      // OAuth redirects, so no navigation needed here
+      // OAuth redirects out of the app
     } catch (err) {
       setAuthError('Google sign-in failed. Please try again.');
       setGoogleLoading(false);
