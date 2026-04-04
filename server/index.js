@@ -11,8 +11,12 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+import uploadRoutes from './api/reports/upload.js';
+
 // Initialize Gen AI client
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+app.use('/api/reports/upload', uploadRoutes);
 
 app.post('/api/generate', async (req, res) => {
   try {
