@@ -2,26 +2,47 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
+import uploadRoutes from './api/reports/upload.js';
+import getReportRouter from './api/reports/[id].js';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(cors());
+// Restrict CORS to your domains only
+app.use(cors({
+  origin: [
+    'https://snjvni-ai.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ],
+  credentials: true
+}));
+
 app.use(express.json());
 
-import uploadRoutes from './api/reports/upload.js';
-
-// Initialize Gen AI client
+// Initialize Gemini
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-app.use('/api/reports/upload', uploadRoutes);
+// Health check — Render uses this to confirm server is alive
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'SNJVNI backend running',
+    timestamp: new Date().toISOString()
+  });
+});
 
+// Routes
+app.use('/api/reports/upload', uploadRoutes);
+app.use('/api/reports', getReportRouter);
+
+// Generic Gemini generate endpoint
 app.post('/api/generate', async (req, res) => {
   try {
     const { prompt } = req.body;
-    
+
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
@@ -38,6 +59,19 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
+// 404 handler — catch undefined routes
+app.use((req, res) => {
+  res.status(404).json({
+    error: `Route ${req.method} ${req.path} not found`
+  });
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`Server running on port ${port}`);
 });
