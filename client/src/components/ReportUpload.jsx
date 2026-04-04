@@ -92,7 +92,8 @@ const ReportUpload = () => {
     }
 
     try {
-      const res = await fetch('/api/reports/upload', {
+      const API_URL = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${API_URL}/api/reports/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`
