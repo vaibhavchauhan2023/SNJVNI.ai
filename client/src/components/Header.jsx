@@ -160,7 +160,7 @@ export default function Header() {
           ) : (
             <>
               {/* Upload Button */}
-              <button className="flex items-center gap-2 bg-[#0F6E56] text-white rounded-lg px-[18px] py-[10px] font-semibold hover:bg-[#085041] transition duration-200 shadow-sm">
+              <button onClick={() => navigate('/analyze')} className="flex items-center gap-2 bg-[#0F6E56] text-white rounded-lg px-[18px] py-[10px] font-semibold hover:bg-[#085041] transition duration-200 shadow-sm">
                 <UploadCloud className="w-4 h-4" />
                 <span className="hidden sm:inline">Upload Report</span>
                 <span className="sm:hidden">Upload</span>

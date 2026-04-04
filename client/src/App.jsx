@@ -12,6 +12,7 @@ import Profile from './components/Profile';
 import Dashboard from './components/Dashboard';
 import ReportDashboard from './components/ReportDashboard';
 import ReportHistory from './components/ReportHistory';
+import ReportUpload from './components/ReportUpload';
 import ProtectedRoute from './components/ProtectedRoute'
 
 // --- ANIMATION WRAPPER ---
@@ -443,6 +444,10 @@ function AppContent() {
 
         <Route path="/dashboard" element={
           <ProtectedRoute><Dashboard /></ProtectedRoute>
+        } />
+
+        <Route path="/analyze" element={
+          <ProtectedRoute><ReportUpload /></ProtectedRoute>
         } />
 
         <Route path="/my-reports" element={
