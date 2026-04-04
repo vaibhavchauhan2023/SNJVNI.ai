@@ -1,10 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Anon key for verifying user JWT
-const supabaseAuth = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY
-)
+import * as dotenv from 'dotenv';
+dotenv.config();
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+
+const supabaseAuth = supabaseUrl ? createClient(supabaseUrl, supabaseKey) : null;
 
 export const requireAuth = async (req, res, next) => {
     try {

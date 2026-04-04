@@ -1,7 +1,8 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
 import { createClient } from '@supabase/supabase-js'
 
-// Service role key — full DB access — never expose to frontend
-export const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
-)
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+
+export const supabase = supabaseUrl ? createClient(supabaseUrl, supabaseKey) : null;

@@ -1,23 +1,26 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+const apiKey = process.env.GEMINI_API_KEY || '';
+const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
 // Sonnet-equivalent model for report analysis
-export const reportModel = genAI.getGenerativeModel({
+export const reportModel = genAI ? genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
     generationConfig: {
         responseMimeType: 'application/json', // force JSON output
         temperature: 0.1  // low temp = consistent medical output
     }
-})
+}) : null;
 
 // Fast model for ION chat
-export const ionModel = genAI.getGenerativeModel({
+export const ionModel = genAI ? genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
     generationConfig: {
         temperature: 0.7  // slightly more conversational
     }
-})
+}) : null;
 
 export const SYSTEM_PROMPT = `
 You are a medical report analysis AI for SNJVNI.ai.
