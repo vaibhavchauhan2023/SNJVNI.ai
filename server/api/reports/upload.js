@@ -139,7 +139,7 @@ Analyze the attached medical report image and return the JSON.
         ) || []
         const hasCritical = flaggedMarkers.some(b => b.status === 'critical')
 
-        await supabase.from('reports').update({
+        const { error: updateError } = await supabase.from('reports').update({
             title: analysisData.patientSnapshot?.reportType || 'Medical Report',
             type: analysisData.patientSnapshot?.reportType,
             report_date: analysisData.patientSnapshot?.date,
@@ -157,10 +157,12 @@ Analyze the attached medical report image and return the JSON.
                 ' requires immediate attention'
                 : null
         }).eq('id', reportId)
+        
+        if (updateError) throw new Error(`Supabase Update Error: ${updateError.message}`);
 
         // Save biomarkers
         if (analysisData.biomarkers?.length > 0) {
-            await supabase.from('biomarkers').insert(
+            const { error: bioError } = await supabase.from('biomarkers').insert(
                 analysisData.biomarkers.map(b => ({
                     report_id: reportId,
                     name: b.name,
@@ -175,11 +177,12 @@ Analyze the attached medical report image and return the JSON.
                     trend: b.trend
                 }))
             )
+            if (bioError) throw new Error(`Supabase Biomarker Insert Error: ${bioError.message}`);
         }
 
         // Save insights
         if (analysisData.insights?.length > 0) {
-            await supabase.from('insights').insert(
+            const { error: insError } = await supabase.from('insights').insert(
                 analysisData.insights.map(i => ({
                     report_id: reportId,
                     type: 'insight',
@@ -189,11 +192,12 @@ Analyze the attached medical report image and return the JSON.
                     related_marker: i.relatedMarker
                 }))
             )
+            if (insError) throw new Error(`Supabase Insight Insert Error: ${insError.message}`);
         }
 
         // Save future risks
         if (analysisData.futureRisks?.length > 0) {
-            await supabase.from('insights').insert(
+            const { error: riskError } = await supabase.from('insights').insert(
                 analysisData.futureRisks.map(r => ({
                     report_id: reportId,
                     type: 'future_risk',
@@ -203,11 +207,12 @@ Analyze the attached medical report image and return the JSON.
                     timeframe: r.timeframe
                 }))
             )
+            if (riskError) throw new Error(`Supabase Future Risk Insert Error: ${riskError.message}`);
         }
 
         // Save habits
         if (analysisData.habits?.length > 0) {
-            await supabase.from('insights').insert(
+            const { error: habError } = await supabase.from('insights').insert(
                 analysisData.habits.map(h => ({
                     report_id: reportId,
                     type: 'habit',
@@ -217,17 +222,19 @@ Analyze the attached medical report image and return the JSON.
                     related_marker: h.relatedMarker
                 }))
             )
+            if (habError) throw new Error(`Supabase Habit Insert Error: ${habError.message}`);
         }
 
         // Save glossary
         if (analysisData.glossary?.length > 0) {
-            await supabase.from('glossary_terms').insert(
+            const { error: glosError } = await supabase.from('glossary_terms').insert(
                 analysisData.glossary.map(g => ({
                     report_id: reportId,
                     term: g.term,
                     definition: g.definition
                 }))
             )
+            if (glosError) throw new Error(`Supabase Glossary Insert Error: ${glosError.message}`);
         }
 
         console.log(`✓ Report ${reportId} analyzed and saved successfully`)
