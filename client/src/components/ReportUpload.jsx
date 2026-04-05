@@ -139,7 +139,7 @@ const ReportUpload = () => {
           if (data?.status === 'complete') {
             clearInterval(pollInterval)
             console.log('Report complete, navigating to:', `/report/${reportId}`)
-            navigate(`/report/${reportId}`)
+            window.location.href = `/report/${reportId}`
             return
           }
 
