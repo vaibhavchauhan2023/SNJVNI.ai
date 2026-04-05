@@ -16,7 +16,8 @@ const upload = multer({
 })
 
 router.post('/', requireAuth, upload.single('report'), async (req, res) => {
-    const tempFilePath = req.file?.path
+    const tempFilePath = req.file?.path;
+    let reportId;
 
     try {
         const userId = req.user.id
@@ -27,7 +28,7 @@ router.post('/', requireAuth, upload.single('report'), async (req, res) => {
         }
 
         // ── STEP 1: Create report row with "processing" status ──
-        const reportId = uuidv4()
+        reportId = uuidv4()
         const { error: insertError } = await supabase
             .from('reports')
             .insert({
@@ -234,11 +235,17 @@ Analyze the attached medical report image and return the JSON.
     } catch (error) {
         console.error('Upload error:', error)
 
-        // Update report status to failed
-        if (req.body?.reportId) {
+        // If we haven't answered the client yet, answer them with error
+        if (!res.headersSent) {
+            return res.status(500).json({ error: error.message || 'Internal Server Error' })
+        }
+
+        // If we already told the client we are 'processing', tell DB we failed
+        // so the frontend stops polling!
+        if (typeof reportId !== 'undefined' && reportId) {
             await supabase.from('reports')
                 .update({ status: 'failed' })
-                .eq('id', req.body.reportId)
+                .eq('id', reportId)
         }
     } finally {
         // Always clean up temp file
