@@ -5,6 +5,7 @@ import {
   Heart, Share2, Send, Clock, Coffee, Sun, Leaf,
   AlertCircle, TrendingUp, ChevronDown, ChevronUp, Check, ArrowUp
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 // --- Status style helper ---
 const getStatusStyle = (status) => {
@@ -167,76 +168,53 @@ const ReportDashboard = () => {
   
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!id || !session?.access_token) return;
-
-    async function fetchReport() {
-        try {
-            const apiUrl = import.meta.env.VITE_API_URL || '';
-            const res = await fetch(`${apiUrl}/api/reports/${id}`, {
-                headers: {
-                    'Authorization': `Bearer ${session.access_token}`
-                }
-            });
-            if (!res.ok) throw new Error('Failed to fetch');
-            const result = await res.json();
-            
-            // Map DB format to Dashboard UI format
-            
-            // Calculate Risk Magnitude
-            const riskMagnitudeMap = {};
-            (result.biomarkers || []).forEach(b => {
-                const sys = b.body_system || 'General';
-                if (!riskMagnitudeMap[sys] || b.risk_score > riskMagnitudeMap[sys]) {
-                    riskMagnitudeMap[sys] = b.risk_score || 0;
-                }
-            });
-            const riskMagnitude = Object.entries(riskMagnitudeMap)
-                .map(([system, score]) => ({ system, score }))
-                .sort((a,b) => b.score - a.score);
-
-            setReportData({
-                patient: {
-                    ...result.patient,
-                    healthScore: result.healthScore?.score || 0,
-                    healthStatus: result.healthScore?.status || 'normal'
-                },
-                report: result.report,
-                biomarkers: (result.biomarkers || []).map(b => ({
-                    ...b,
-                    system: b.body_system,
-                    range: b.reference_range,
-                    riskScore: b.risk_score
-                })),
-                riskMagnitude,
-                futureProjection: (result.futureRisks || []).map(r => ({
-                    timeframe: r.timeframe,
-                    severity: r.severity,
-                    text: r.body
-                })),
-                habits: (result.habits || []).map(h => ({
-                    id: h.id,
-                    label: h.body || 'Healthy Habit',
-                    icon: (h.title || '').toLowerCase().includes('sleep') ? 'clock' : 'leaf',
-                    relatedMarker: h.related_marker
-                })),
-                glossary: result.glossary || [],
-                insights: (result.insights || []).map(i => ({
-                    ...i,
-                    icon: i.severity === 'critical' ? 'alert-circle' : 'trending-up'
-                })),
-                ionMessages: []
-            });
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
+    const fetchReport = async () => {
+      try {
+        setLoading(true)
+        
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        console.log('Fetching report:', id)
+        console.log('API URL:', import.meta.env.VITE_API_URL)
+        
+        const res = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/reports/${id}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        )
+        
+        console.log('Response status:', res.status)
+        
+        if (!res.ok) {
+          const errorText = await res.text()
+          console.error('Fetch failed:', errorText)
+          setError(`Failed to load report: ${res.status}`)
+          setLoading(false)
+          return
         }
+        
+        const data = await res.json()
+        console.log('Report data received:', data)
+        
+        setReportData(data)
+        setLoading(false)
+        
+      } catch (err) {
+        console.error('Fetch error:', err)
+        setError('Failed to load report')
+        setLoading(false)
+      }
     }
     
-    fetchReport();
-  }, [id, session]);
+    if (id) fetchReport()
+  }, [id])
 
   // --- Resizable panels ---
   const left = useResizable(220, 180, 340, 'snjvni_left_width');

@@ -31,14 +31,30 @@ router.get('/:id', requireAuth, async (req, res) => {
                 .select('*').eq('report_id', id)
         ])
 
-        // Shape response to match frontend reportData structure
+        // Map DB format to Dashboard UI format
+        const biomarkersList = biomarkers.data || []
+        
+        // Calculate Risk Magnitude
+        const riskMagnitudeMap = {};
+        biomarkersList.forEach(b => {
+            const sys = b.body_system || 'General';
+            if (!riskMagnitudeMap[sys] || b.risk_score > riskMagnitudeMap[sys]) {
+                riskMagnitudeMap[sys] = b.risk_score || 0;
+            }
+        });
+        const riskMagnitude = Object.entries(riskMagnitudeMap)
+            .map(([system, score]) => ({ system, score }))
+            .sort((a,b) => b.score - a.score);
+
         const reportData = {
             patient: {
                 name: req.user.user_metadata?.full_name || 'User',
                 age: null,
                 sex: null,
                 initials: (req.user.user_metadata?.full_name || 'U')
-                    .split(' ').map(n => n[0]).join('').toUpperCase()
+                    .split(' ').map(n => n[0]).join('').toUpperCase(),
+                healthScore: report.overall_score || 0,
+                healthStatus: report.health_status || 'normal'
             },
             report: {
                 id: report.id,
@@ -53,15 +69,30 @@ router.get('/:id', requireAuth, async (req, res) => {
                 hasCritical: report.has_critical,
                 criticalMessage: report.critical_message
             },
-            healthScore: {
-                score: report.overall_score,
-                status: report.health_status
-            },
-            biomarkers: biomarkers.data || [],
-            insights: insights.data?.filter(i => i.type === 'insight') || [],
-            futureRisks: insights.data?.filter(i => i.type === 'future_risk') || [],
-            habits: insights.data?.filter(i => i.type === 'habit') || [],
-            glossary: glossary.data || []
+            biomarkers: biomarkersList.map(b => ({
+                ...b,
+                system: b.body_system,
+                range: b.reference_range,
+                riskScore: b.risk_score
+            })),
+            riskMagnitude,
+            futureProjection: (insights.data?.filter(i => i.type === 'future_risk') || []).map(r => ({
+                timeframe: r.timeframe,
+                severity: r.severity,
+                text: r.body
+            })),
+            habits: (insights.data?.filter(i => i.type === 'habit') || []).map(h => ({
+                id: h.id,
+                label: h.body || 'Healthy Habit',
+                icon: (h.title || '').toLowerCase().includes('sleep') ? 'clock' : 'leaf',
+                relatedMarker: h.related_marker
+            })),
+            glossary: glossary.data || [],
+            insights: (insights.data?.filter(i => i.type === 'insight') || []).map(i => ({
+                ...i,
+                icon: i.severity === 'critical' ? 'alert-circle' : 'trending-up'
+            })),
+            ionMessages: []
         }
 
         res.json(reportData)
