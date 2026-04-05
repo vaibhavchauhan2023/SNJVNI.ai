@@ -1,34 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   Heart, Share2, Send, Clock, Coffee, Sun, Leaf,
   AlertCircle, TrendingUp, ChevronDown, ChevronUp, Check, ArrowUp
 } from 'lucide-react';
-
-// ============================================
-// REPORT DASHBOARD — API INTEGRATION POINTS
-// ============================================
-//
-// 1. FETCH REPORT DATA:
-//    GET /api/reports/:id
-//    Replace static reportData prop with:
-//    const [reportData, setReportData] = useState(null)
-//    useEffect(() => { fetchReport(id) }, [id])
-//
-// 2. ION CHAT:
-//    POST /api/ion/chat
-//    Body: { message, reportId, history, patientContext }
-//    Response: { reply: string } (streaming preferred)
-//
-// 3. SHARE REPORT:
-//    POST /api/reports/:id/share
-//    Response: { shareUrl: string }
-//    Trigger from Share button in TopBar
-//
-// 4. LOADING STATE:
-//    Show skeleton loaders while fetching
-//    Use reportData === null as loading condition
-// ============================================
 
 // --- Status style helper ---
 const getStatusStyle = (status) => {
@@ -136,68 +112,6 @@ const insightIconMap = {
   'trending-up': TrendingUp,
 };
 
-// --- Mock data (default prop) ---
-// TODO: Replace with API call to GET /api/reports/:id
-const defaultReportData = {
-  patient: {
-    name: "Rahul Kumar",
-    age: 32,
-    sex: "Male",
-    initials: "RK",
-    healthScore: 6.2,
-    healthStatus: "needs_attention",
-  },
-  report: {
-    id: "rep_123",
-    title: "Complete Blood Count + Thyroid Panel",
-    date: "March 19, 2026",
-    lab: "Apollo Diagnostics",
-    doctor: "Dr. Sharma",
-    type: "DIAGNOSTIC REPORT",
-    flaggedCount: 3,
-    totalMarkers: 9,
-    hasCritical: true,
-    criticalMessage: "Immediate Action Required: Critical TSH Elevation",
-    criticalDetail: "Your thyroid levels suggest Primary Hypothyroidism. Schedule a consultation with an Endocrinologist within 48 hours.",
-  },
-  biomarkers: [
-    { id: "tsh", name: "TSH", system: "Endocrine System", value: "12.4", unit: "uIU/mL", range: "0.45 - 4.50", status: "critical", riskScore: 8 },
-    { id: "haemoglobin", name: "Haemoglobin", system: "Hematologic", value: "11.2", unit: "g/dL", range: "13.5 - 17.5", status: "low", riskScore: 5 },
-    { id: "ldl", name: "LDL Cholesterol", system: "Cardiovascular", value: "165", unit: "mg/dL", range: "< 100", status: "high", riskScore: 7 },
-    { id: "glucose", name: "Glucose (Fasting)", system: "Metabolic", value: "92", unit: "mg/dL", range: "70 - 99", status: "normal", riskScore: 2 },
-    { id: "creatinine", name: "Creatinine", system: "Renal Function", value: "0.9", unit: "mg/dL", range: "0.7 - 1.3", status: "normal", riskScore: 1 },
-    { id: "vitamind", name: "Vitamin D", system: "Nutritional", value: "18", unit: "ng/mL", range: "30 - 100", status: "low", riskScore: 4 },
-  ],
-  riskMagnitude: [
-    { system: "Thyroid", score: 8 },
-    { system: "Metabolic", score: 5 },
-    { system: "Renal", score: 2 },
-  ],
-  futureProjection: [
-    { timeframe: "6 Months", severity: "critical", text: "Increased risk of chronic fatigue and weight gain if untreated." },
-    { timeframe: "1 Year", severity: "warning", text: "Potential for secondary hypertension due to LDL accumulation." },
-    { timeframe: "5 Years", severity: "muted", text: "High probability of cardiovascular complications." },
-  ],
-  habits: [
-    { id: "sleep", label: "8h Sleep Required", icon: "clock", relatedMarker: "TSH" },
-    { id: "fat", label: "Reduce Saturated Fat", icon: "coffee", relatedMarker: "LDL" },
-    { id: "sun", label: "20m Sunlight Exposure", icon: "sun", relatedMarker: "Vitamin D" },
-    { id: "greens", label: "Leafy Green Intake", icon: "leaf", relatedMarker: "Haemoglobin" },
-  ],
-  glossary: [
-    { term: "TSH (Thyroid Stimulating Hormone)", definition: "A pituitary hormone that stimulates the thyroid gland to produce thyroxine." },
-    { term: "Haemoglobin", definition: "Iron-rich protein in red blood cells that carries oxygen from the lungs to body tissues." },
-    { term: "LDL (Low-Density Lipoprotein)", definition: "Often called bad cholesterol because it can lead to plaque buildup in arteries." },
-    { term: "Vitamin D", definition: "Fat-soluble nutrient essential for bone health and immune system function." },
-    { term: "Glucose", definition: "The primary sugar found in blood that provides energy for the body's cells." },
-  ],
-  insights: [
-    { id: "tsh_correlation", title: "The TSH Correlation", severity: "critical", icon: "alert-circle", body: "Your TSH of 12.4 is significantly elevated, indicating that your pituitary gland is overworking to trigger a sluggish thyroid. This likely explains your reported fatigue and sensitivity to cold." },
-    { id: "iron_ldl", title: "Iron & LDL Dynamic", severity: "warning", icon: "trending-up", body: "The mild anemia (Haemoglobin 11.2) combined with elevated LDL suggests a metabolic slowdown. When thyroid function is low, the body struggles to clear LDL from the blood efficiently." },
-  ],
-  ionMessages: [],
-};
-
 // ============================================
 // Resizable panel drag hook
 // ============================================
@@ -209,7 +123,7 @@ const useResizable = (initialWidth, min, max, storageKey) => {
   const isDragging = useRef(false);
   const startX = useRef(0);
   const startW = useRef(0);
-  const direction = useRef(1); // 1 = left panel (drag right = wider), -1 = right panel (drag left = wider)
+  const direction = useRef(1);
 
   const persistWidth = useCallback((w) => {
     localStorage.setItem(storageKey, String(w));
@@ -246,8 +160,92 @@ const useResizable = (initialWidth, min, max, storageKey) => {
   return { width, onMouseDown };
 };
 
-const ReportDashboard = ({ reportData = defaultReportData }) => {
+const ReportDashboard = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const { session } = useAuth();
+  
+  const [loading, setLoading] = useState(true);
+  const [reportData, setReportData] = useState(null);
+
+  useEffect(() => {
+    if (!id || !session?.access_token) return;
+
+    async function fetchReport() {
+        try {
+            const apiUrl = import.meta.env.VITE_API_URL || '';
+            const res = await fetch(`${apiUrl}/api/reports/${id}`, {
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`
+                }
+            });
+            if (!res.ok) throw new Error('Failed to fetch');
+            const result = await res.json();
+            
+            // Map DB format to Dashboard UI format
+            
+            // Calculate Risk Magnitude
+            const riskMagnitudeMap = {};
+            (result.biomarkers || []).forEach(b => {
+                const sys = b.body_system || 'General';
+                if (!riskMagnitudeMap[sys] || b.risk_score > riskMagnitudeMap[sys]) {
+                    riskMagnitudeMap[sys] = b.risk_score || 0;
+                }
+            });
+            const riskMagnitude = Object.entries(riskMagnitudeMap)
+                .map(([system, score]) => ({ system, score }))
+                .sort((a,b) => b.score - a.score);
+
+            setReportData({
+                patient: {
+                    ...result.patient,
+                    healthScore: result.healthScore?.score || 0,
+                    healthStatus: result.healthScore?.status || 'normal'
+                },
+                report: result.report,
+                biomarkers: (result.biomarkers || []).map(b => ({
+                    ...b,
+                    system: b.body_system,
+                    range: b.reference_range,
+                    riskScore: b.risk_score
+                })),
+                riskMagnitude,
+                futureProjection: (result.futureRisks || []).map(r => ({
+                    timeframe: r.timeframe,
+                    severity: r.severity,
+                    text: r.body
+                })),
+                habits: (result.habits || []).map(h => ({
+                    id: h.id,
+                    label: h.body, // action from Gemini
+                    icon: h.title?.toLowerCase().includes('sleep') ? 'clock' : 'leaf',
+                    relatedMarker: h.related_marker
+                })),
+                glossary: result.glossary || [],
+                insights: (result.insights || []).map(i => ({
+                    ...i,
+                    icon: i.severity === 'critical' ? 'alert-circle' : 'trending-up'
+                })),
+                ionMessages: []
+            });
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    }
+    
+    fetchReport();
+  }, [id, session]);
+
+  if (loading || !reportData) {
+      return (
+          <div className="flex items-center justify-center min-h-screen bg-white">
+              <div className="w-[40px] h-[40px] rounded-full border-4 border-[#F0FDFA] border-t-[#0D9488] animate-spin"></div>
+          </div>
+      );
+  }
+
   const { patient, report, biomarkers, riskMagnitude, futureProjection, habits, glossary, insights } = reportData;
 
   // --- Resizable panels ---
