@@ -238,22 +238,12 @@ const ReportDashboard = () => {
     fetchReport();
   }, [id, session]);
 
-  if (loading || !reportData) {
-      return (
-          <div className="flex items-center justify-center min-h-screen bg-white">
-              <div className="w-[40px] h-[40px] rounded-full border-4 border-[#F0FDFA] border-t-[#0D9488] animate-spin"></div>
-          </div>
-      );
-  }
-
-  const { patient, report, biomarkers, riskMagnitude, futureProjection, habits, glossary, insights } = reportData;
-
   // --- Resizable panels ---
   const left = useResizable(220, 180, 340, 'snjvni_left_width');
   const right = useResizable(240, 200, 360, 'snjvni_right_width');
 
   // --- ION Chat state ---
-  const [ionMessages, setIonMessages] = useState(reportData.ionMessages || []);
+  const [ionMessages, setIonMessages] = useState([]);
   const [ionInput, setIonInput] = useState('');
   const [ionLoading, setIonLoading] = useState(false);
   const ionEndRef = useRef(null);
@@ -267,6 +257,17 @@ const ReportDashboard = () => {
   useEffect(() => {
     ionEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [ionMessages, ionLoading]);
+
+  // Handle loading and null data gracefully after hooks
+  if (loading || !reportData) {
+      return (
+          <div className="flex items-center justify-center min-h-screen bg-white">
+              <div className="w-[40px] h-[40px] rounded-full border-4 border-[#F0FDFA] border-t-[#0D9488] animate-spin"></div>
+          </div>
+      );
+  }
+
+  const { patient, report, biomarkers, riskMagnitude, futureProjection, habits, glossary, insights } = reportData;
 
   const toggleTerm = (idx) => {
     setExpandedTerm((prev) => (prev === idx ? null : idx));
