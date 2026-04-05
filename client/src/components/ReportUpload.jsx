@@ -78,63 +78,92 @@ const ReportUpload = () => {
   }, []);
 
   const handleUpload = async (file) => {
-    setStatus('processing');
-
-    const formData = new FormData();
-    formData.append('report', file);
-
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
-      setErrorMessage('You must be logged in to upload a report.');
-      setStatus('error');
-      return;
-    }
-
     try {
-      const API_URL = import.meta.env.VITE_API_URL || '';
-      const res = await fetch(`${API_URL}/api/reports/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: formData
-      });
+      setStatus('processing')
+      
+      const formData = new FormData()
+      formData.append('report', file)
 
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        throw new Error(errBody.error || `Upload failed (${res.status})`);
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        setErrorMessage('You must be logged in to upload a report.');
+        setStatus('error');
+        return;
       }
 
-      const { reportId } = await res.json();
-
-      // Poll for completion
-      const checkStatus = setInterval(async () => {
-        const { data } = await supabase
-          .from('reports')
-          .select('status')
-          .eq('id', reportId)
-          .single();
-
-        if (data?.status === 'complete') {
-          clearInterval(checkStatus);
-          navigate(`/report/${reportId}`);
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/reports/upload`, 
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: formData
         }
-        if (data?.status === 'failed') {
-          clearInterval(checkStatus);
-          setErrorMessage('Report analysis failed. Please try again with a clearer image.');
-          setStatus('error');
-        }
-      }, 2000);
+      )
 
-      // Safety timeout — stop polling after 3 minutes
-      setTimeout(() => {
-        clearInterval(checkStatus);
-      }, 180000);
-    } catch (err) {
-      console.error('Upload error:', err);
-      setErrorMessage(err.message || 'Something went wrong. Please try again.');
-      setStatus('error');
+      if (!res.ok) {
+        throw new Error(`Upload failed: ${res.status}`)
+      }
+
+      const { reportId } = await res.json()
+      
+      if (!reportId) {
+        throw new Error('No reportId returned from server')
+      }
+
+      console.log('Report ID received:', reportId)
+
+      // Poll Supabase directly every 3 seconds
+      let attempts = 0
+      const maxAttempts = 40 // 2 minutes max
+
+      const pollInterval = setInterval(async () => {
+        attempts++
+        console.log(`Polling attempt ${attempts} for report ${reportId}`)
+
+        try {
+          const { data, error } = await supabase
+            .from('reports')
+            .select('id, status')
+            .eq('id', reportId)
+            .single()
+
+          console.log('Poll result:', data, error)
+
+          if (error) {
+            console.error('Polling error:', error)
+          }
+
+          if (data?.status === 'complete') {
+            clearInterval(pollInterval)
+            console.log('Report complete, navigating to:', `/report/${reportId}`)
+            navigate(`/report/${reportId}`)
+            return
+          }
+
+          if (data?.status === 'failed') {
+            clearInterval(pollInterval)
+            setStatus('error')
+            return
+          }
+
+          if (attempts >= maxAttempts) {
+            clearInterval(pollInterval)
+            setStatus('error')
+            console.error('Polling timed out after 2 minutes')
+          }
+
+        } catch (pollError) {
+          console.error('Poll request failed:', pollError)
+        }
+
+      }, 3000)
+
+    } catch (error) {
+      console.error('Upload error:', error)
+      setStatus('error')
     }
   };
 
