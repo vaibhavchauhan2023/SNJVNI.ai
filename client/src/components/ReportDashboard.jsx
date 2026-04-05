@@ -217,8 +217,8 @@ const ReportDashboard = () => {
                 })),
                 habits: (result.habits || []).map(h => ({
                     id: h.id,
-                    label: h.body, // action from Gemini
-                    icon: h.title?.toLowerCase().includes('sleep') ? 'clock' : 'leaf',
+                    label: h.body || 'Healthy Habit',
+                    icon: (h.title || '').toLowerCase().includes('sleep') ? 'clock' : 'leaf',
                     relatedMarker: h.related_marker
                 })),
                 glossary: result.glossary || [],
