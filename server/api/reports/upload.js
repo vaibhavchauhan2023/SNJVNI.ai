@@ -139,10 +139,22 @@ Analyze the attached medical report image and return the JSON.
         ) || []
         const hasCritical = flaggedMarkers.some(b => b.status === 'critical')
 
+        // Clean up date for postgres (must be YYYY-MM-DD)
+        let safeDate = analysisData.patientSnapshot?.date;
+        if (safeDate && safeDate.includes('/')) {
+            const parts = safeDate.split('/');
+            // If it's DD/MM/YYYY
+            if (parts[0].length <= 2 && parts[2]?.length === 4) {
+                safeDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            }
+        }
+        // If it's still not YYYY-MM-DD length, just drop it to avoid crash
+        if (safeDate && !/^\d{4}-\d{2}-\d{2}$/.test(safeDate)) safeDate = null;
+
         const { error: updateError } = await supabase.from('reports').update({
             title: analysisData.patientSnapshot?.reportType || 'Medical Report',
             type: analysisData.patientSnapshot?.reportType,
-            report_date: analysisData.patientSnapshot?.date,
+            report_date: safeDate,
             lab: analysisData.patientSnapshot?.lab,
             doctor: analysisData.patientSnapshot?.doctor,
             file_url: publicUrl,

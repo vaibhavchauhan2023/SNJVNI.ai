@@ -40,7 +40,7 @@ RETURN EXACTLY THIS JSON SHAPE — nothing else:
     "name": "string or null",
     "age": "string or null", 
     "reportType": "string",
-    "date": "string or null",
+    "date": "YYYY-MM-DD or null",
     "lab": "string or null",
     "doctor": "string or null"
   },
