@@ -4,6 +4,7 @@ import {
   Check, Info, Eye, EyeOff, Trash2, X, Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -21,14 +22,15 @@ const Profile = () => {
     personal: false, health: false, preferences: false, security: false
   });
   const [toast, setToast] = useState({ show: false, message: '', isError: false });
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
   // -- FORM DATA --
-  const [data, setData] = useState({
+  const [profileData, setProfileData] = useState({
     firstName: userName,
     lastName: '',
     email: '',
-    dob: '',
-    sex: '',
+    dateOfBirth: '',
+    biologicalSex: '',
     height: '',
     heightUnit: 'cm',
     weight: '',
@@ -38,7 +40,7 @@ const Profile = () => {
     conditions: [],
     medications: [],
     allergies: 'None',
-    pregnant: false,
+    isPregnant: false,
     familyHistory: [],
 
     language: 'English',
@@ -48,47 +50,84 @@ const Profile = () => {
     weeklyDigest: true,
   });
 
+  // SQL to run in Supabase if updated_at column missing:
+  // ALTER TABLE profiles ADD COLUMN IF NOT EXISTS 
+  // updated_at timestamptz default now();
+  // ALTER TABLE profiles ADD COLUMN IF NOT EXISTS 
+  // ethnicity text;
   useEffect(() => {
     const fetchProfile = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      
-      const { data: profileData, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single()
-      
-      if (error) {
-        console.error('Profile fetch error:', error)
-        return
-      }
-      
-      if (profileData) {
-        const full = profileData.full_name || session.user.user_metadata?.full_name || '';
-        const parts = full.split(' ');
-        const first = parts[0] || '';
-        const last = parts.slice(1).join(' ');
+      try {
+        setLoadingProfile(true)
 
-        setData(prev => ({
+        const { data: { session }, error: sessionError } = 
+          await supabase.auth.getSession()
+        
+        if (sessionError || !session) {
+          console.error('No session:', sessionError)
+          return
+        }
+
+        console.log('User ID:', session.user.id)
+        console.log('User email:', session.user.email)
+        console.log('User metadata:', session.user.user_metadata)
+
+        // Fetch from profiles table
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+
+        console.log('Profile from DB:', profile)
+        console.log('Profile error:', profileError)
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError)
+        }
+
+        // Get full name — try profile table first, 
+        // then fall back to Google metadata
+        const fullName = profile?.full_name || 
+          session.user.user_metadata?.full_name || 
+          session.user.user_metadata?.name || 
+          ''
+        
+        const nameParts = fullName.trim().split(' ')
+        const firstName = nameParts[0] || ''
+        const lastName = nameParts.slice(1).join(' ') || ''
+
+        // Set all profile fields
+        setProfileData(prev => ({
           ...prev,
-          firstName: first,
-          lastName: last,
+          firstName: firstName,
+          lastName: lastName,
           email: session.user.email || '',
-          dob: profileData.age || '', // Assuming age maps roughly or DB holds DOB directly? Let's use age for dob field for now based on rules
-          sex: profileData.sex || '',
-          height: profileData.height || '',
-          weight: profileData.weight || '',
-          conditions: profileData.conditions || [],
-          medications: profileData.medications || [],
-          allergies: profileData.allergies || 'None',
-          language: profileData.language || 'English',
-          units: profileData.units || 'Metric',
-          // User requested mapping explicitly:
+          dateOfBirth: profile?.date_of_birth || '',
+          biologicalSex: profile?.sex || '',
+          height: profile?.height || '',
+          weight: profile?.weight || '',
+          heightUnit: profile?.height_unit || 'cm',
+          weightUnit: profile?.weight_unit || 'kg',
+          ethnicity: profile?.ethnicity || '',
+          conditions: profile?.conditions || [],
+          medications: profile?.medications || [],
+          allergies: profile?.allergies || '',
+          isPregnant: profile?.is_pregnant || false,
+          familyHistory: profile?.family_history || [],
+          language: profile?.language || 'English',
+          units: profile?.units || 'metric',
+          trackGoals: profile?.track_goals || [],
+          testFrequency: profile?.test_frequency || '',
         }))
+
+      } catch (err) {
+        console.error('fetchProfile error:', err)
+      } finally {
+        setLoadingProfile(false)
       }
     }
-    
+
     fetchProfile()
   }, [])
 
@@ -117,6 +156,59 @@ const Profile = () => {
   };
 
   // -- HANDLERS --
+  
+  const savePersonalDetails = async () => {
+    try {
+      setSaving(prev => ({...prev, personal: true}))
+      
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      const fullName = `{profileData.firstName} {profileData.lastName}".replace('`', '`').replace('"', '`').strip() 
+      // Workaround for python string formatting vs javascript template literals:
+      const javascriptFullName = `${profileData.firstName} ${profileData.lastName}`.trim()
+
+      // Update profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: javascriptFullName,
+          date_of_birth: profileData.dateOfBirth || null,
+          sex: profileData.biologicalSex || null,
+          height: profileData.height ? Number(profileData.height) : null,
+          weight: profileData.weight ? Number(profileData.weight) : null,
+          height_unit: profileData.heightUnit || 'cm',
+          weight_unit: profileData.weightUnit || 'kg',
+          ethnicity: profileData.ethnicity || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', session.user.id)
+
+      if (profileError) {
+        console.error('Save error:', profileError)
+        return
+      }
+
+      // Update display name in auth metadata
+      await supabase.auth.updateUser({
+        data: { full_name: javascriptFullName }
+      })
+
+      console.log('Personal details saved successfully')
+      setEditMode(prev => ({ ...prev, personal: false }))
+      
+      // Show success toast
+      showToast('Personal details updated successfully')
+      setTimeout(() => setSaved(p => ({ ...p, personal: false })), 2000);
+
+    } catch (err) {
+      console.error('Save error:', err)
+    } finally {
+      setSaving(prev => ({...prev, personal: false}))
+    }
+  }
+
+
   const saveProfileSection = async (sectionData) => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return { success: false }
@@ -141,27 +233,24 @@ const Profile = () => {
   }
 
   const handleSave = async (section) => {
+    if (section === 'personal') {
+      await savePersonalDetails();
+      return;
+    }
+
     setSaving(p => ({ ...p, [section]: true }));
 
     let sectionData = {};
-    if (section === 'personal') {
+    if (section === 'health') {
       sectionData = {
-        full_name: `${data.firstName} ${data.lastName}`.trim(),
-        sex: data.sex,
-        height: parseFloat(data.height) || null,
-        weight: parseFloat(data.weight) || null,
-        age: parseInt(data.dob) || null // mapped back to age based on request
-      };
-    } else if (section === 'health') {
-      sectionData = {
-        conditions: data.conditions,
-        medications: data.medications,
-        allergies: data.allergies,
+        conditions: profileData.conditions,
+        medications: profileData.medications,
+        allergies: profileData.allergies,
       };
     } else if (section === 'preferences') {
       sectionData = {
-        language: data.language,
-        units: data.units,
+        language: profileData.language,
+        units: profileData.units,
       };
     }
     
@@ -179,6 +268,7 @@ const Profile = () => {
     }
   };
 
+
   const showToast = (message, isError = false) => {
     setToast({ show: true, message, isError });
     setTimeout(() => setToast({ show: false, message: '', isError: false }), 3000);
@@ -186,7 +276,7 @@ const Profile = () => {
 
   const handleArrayToggle = (key, val) => {
     if (!editMode.health) return;
-    setData(prev => {
+    setProfileData(prev => {
       const arr = prev[key];
       if (val === 'None') return { ...prev, [key]: ['None'] };
       const newArr = arr.includes(val) ? arr.filter(i => i !== val) : [...arr.filter(i => i !== 'None'), val];
@@ -196,15 +286,15 @@ const Profile = () => {
 
   const addMedication = (med) => {
     if (!editMode.health) return;
-    if (med && !data.medications.includes(med)) {
-      setData(p => ({ ...p, medications: [...p.medications, med] }));
+    if (med && !profileData.medications.includes(med)) {
+      setProfileData(p => ({ ...p, medications: [...p.medications, med] }));
     }
     setMedInput('');
   };
 
   const removeMedication = (med) => {
     if (!editMode.health) return;
-    setData(p => ({ ...p, medications: p.medications.filter(m => m !== med) }));
+    setProfileData(p => ({ ...p, medications: p.medications.filter(m => m !== med) }));
   };
 
   // -- PASSWORD STRENGTH --
@@ -322,13 +412,13 @@ const Profile = () => {
         {/* User Block */}
         <div className="flex flex-col items-center text-center">
           <div className="relative group w-16 h-16 rounded-full bg-[#F0FDFA] border-2 border-[#CCFBF1] flex items-center justify-center mb-3">
-            <span className="text-[22px] font-bold text-[#0F6E56]">{data.firstName.charAt(0)}</span>
+            <span className="text-[22px] font-bold text-[#0F6E56]">{profileData.firstName.charAt(0)}</span>
             <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">
               <Camera size={16} className="text-white" />
             </div>
           </div>
-          <span className="text-[14px] font-semibold text-[#0F172A]">{data.firstName} {data.lastName}</span>
-          <span className="text-[11px] text-[#94A3B8] mt-0.5">{data.email}</span>
+          <span className="text-[14px] font-semibold text-[#0F172A]">{profileData.firstName} {profileData.lastName}</span>
+          <span className="text-[11px] text-[#94A3B8] mt-0.5">{profileData.email}</span>
           <div className="inline-flex items-center gap-1 bg-[#F0FDFA] border border-[#CCFBF1] rounded-full px-2.5 py-0.5 mt-2">
             <Heart size={10} className="text-[#0F6E56]" />
             <span className="text-[11px] font-medium text-[#0F6E56]">Score: 8.2/10</span>
@@ -371,7 +461,7 @@ const Profile = () => {
             
             <div className="flex items-center gap-5 mb-6">
               <div className="w-20 h-20 rounded-full bg-[#F0FDFA] border-2 border-[#CCFBF1] flex items-center justify-center text-[28px] font-bold text-[#0F6E56] shrink-0">
-                {data.firstName.charAt(0)}
+                {profileData.firstName.charAt(0)}
               </div>
               <div className="flex flex-col">
                 <span className="text-[13px] font-medium text-[#0F172A]">Profile photo</span>
@@ -384,21 +474,21 @@ const Profile = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-5">
-              <Field label="First Name" section="personal" value={data.firstName} onChange={v => setData({...data, firstName: v})} />
-              <Field label="Last Name" section="personal" value={data.lastName} onChange={v => setData({...data, lastName: v})} />
+              <Field label="First Name" section="personal" value={profileData.firstName} onChange={v => setProfileData({...data, firstName: v})} />
+              <Field label="Last Name" section="personal" value={profileData.lastName} onChange={v => setProfileData({...data, lastName: v})} />
               <div className="sm:col-span-2">
-                <Field label="Email" section="personal" type="email" value={data.email} onChange={v => setData({...data, email: v})} />
+                <Field label="Email" section="personal" type="email" value={profileData.email} onChange={v => setProfileData({...data, email: v})} />
               </div>
-              <Field label="Date of Birth" section="personal" type="date" value={data.dob} onChange={v => setData({...data, dob: v})} />
-              <Field label="Biological Sex" section="personal" isSelect options={['Male', 'Female', 'Prefer not to say']} value={data.sex} onChange={v => setData({...data, sex: v})} />
+              <Field label="Date of Birth" section="personal" type="date" value={profileData.dob} onChange={v => setProfileData({...data, dob: v})} />
+              <Field label="Biological Sex" section="personal" isSelect options={['Male', 'Female', 'Prefer not to say']} value={profileData.sex} onChange={v => setProfileData({...data, sex: v})} />
               
               <div className="flex flex-col gap-[6px]">
                 <label className="text-[12px] font-medium text-[#475569]">Height</label>
                 <div className="flex gap-2">
-                  <input type="text" readOnly={!editMode.personal} value={data.height} onChange={e => setData({...data, height: e.target.value})} className={`w-full rounded-[8px] px-3 py-[10px] text-[14px] outline-none transition-all ${editMode.personal ? 'bg-white border border-[#D1D5DB] focus:border-[#0D9488] focus:ring-[3px] focus:ring-[#0D9488]/10' : 'bg-[#F8FAFC] border border-[#E2E8F0] pointer-events-none'}`} />
+                  <input type="text" readOnly={!editMode.personal} value={profileData.height} onChange={e => setProfileData({...data, height: e.target.value})} className={`w-full rounded-[8px] px-3 py-[10px] text-[14px] outline-none transition-all ${editMode.personal ? 'bg-white border border-[#D1D5DB] focus:border-[#0D9488] focus:ring-[3px] focus:ring-[#0D9488]/10' : 'bg-[#F8FAFC] border border-[#E2E8F0] pointer-events-none'}`} />
                   <div className="flex bg-[#F1F5F9] p-0.5 rounded-[6px] shrink-0">
-                    <button disabled={!editMode.personal} onClick={() => setData({...data, heightUnit:'cm'})} className={`px-2 py-0.5 text-[11px] rounded-[4px] font-medium ${data.heightUnit==='cm' ? 'bg-[#0F6E56] text-white' : 'text-[#6B7280]'}`}>cm</button>
-                    <button disabled={!editMode.personal} onClick={() => setData({...data, heightUnit:'ft'})} className={`px-2 py-0.5 text-[11px] rounded-[4px] font-medium ${data.heightUnit==='ft' ? 'bg-[#0F6E56] text-white' : 'text-[#6B7280]'}`}>ft</button>
+                    <button disabled={!editMode.personal} onClick={() => setProfileData({...data, heightUnit:'cm'})} className={`px-2 py-0.5 text-[11px] rounded-[4px] font-medium ${profileData.heightUnit==='cm' ? 'bg-[#0F6E56] text-white' : 'text-[#6B7280]'}`}>cm</button>
+                    <button disabled={!editMode.personal} onClick={() => setProfileData({...data, heightUnit:'ft'})} className={`px-2 py-0.5 text-[11px] rounded-[4px] font-medium ${profileData.heightUnit==='ft' ? 'bg-[#0F6E56] text-white' : 'text-[#6B7280]'}`}>ft</button>
                   </div>
                 </div>
               </div>
@@ -406,16 +496,16 @@ const Profile = () => {
               <div className="flex flex-col gap-[6px]">
                 <label className="text-[12px] font-medium text-[#475569]">Weight</label>
                 <div className="flex gap-2">
-                  <input type="text" readOnly={!editMode.personal} value={data.weight} onChange={e => setData({...data, weight: e.target.value})} className={`w-full rounded-[8px] px-3 py-[10px] text-[14px] outline-none transition-all ${editMode.personal ? 'bg-white border border-[#D1D5DB] focus:border-[#0D9488] focus:ring-[3px] focus:ring-[#0D9488]/10' : 'bg-[#F8FAFC] border border-[#E2E8F0] pointer-events-none'}`} />
+                  <input type="text" readOnly={!editMode.personal} value={profileData.weight} onChange={e => setProfileData({...data, weight: e.target.value})} className={`w-full rounded-[8px] px-3 py-[10px] text-[14px] outline-none transition-all ${editMode.personal ? 'bg-white border border-[#D1D5DB] focus:border-[#0D9488] focus:ring-[3px] focus:ring-[#0D9488]/10' : 'bg-[#F8FAFC] border border-[#E2E8F0] pointer-events-none'}`} />
                   <div className="flex bg-[#F1F5F9] p-0.5 rounded-[6px] shrink-0">
-                    <button disabled={!editMode.personal} onClick={() => setData({...data, weightUnit:'kg'})} className={`px-2 py-0.5 text-[11px] rounded-[4px] font-medium ${data.weightUnit==='kg' ? 'bg-[#0F6E56] text-white' : 'text-[#6B7280]'}`}>kg</button>
-                    <button disabled={!editMode.personal} onClick={() => setData({...data, weightUnit:'lbs'})} className={`px-2 py-0.5 text-[11px] rounded-[4px] font-medium ${data.weightUnit==='lbs' ? 'bg-[#0F6E56] text-white' : 'text-[#6B7280]'}`}>lbs</button>
+                    <button disabled={!editMode.personal} onClick={() => setProfileData({...data, weightUnit:'kg'})} className={`px-2 py-0.5 text-[11px] rounded-[4px] font-medium ${profileData.weightUnit==='kg' ? 'bg-[#0F6E56] text-white' : 'text-[#6B7280]'}`}>kg</button>
+                    <button disabled={!editMode.personal} onClick={() => setProfileData({...data, weightUnit:'lbs'})} className={`px-2 py-0.5 text-[11px] rounded-[4px] font-medium ${profileData.weightUnit==='lbs' ? 'bg-[#0F6E56] text-white' : 'text-[#6B7280]'}`}>lbs</button>
                   </div>
                 </div>
               </div>
 
               <div className="sm:col-span-2">
-                <Field label="Ethnicity (Optional)" section="personal" isSelect options={['South Asian', 'East Asian', 'African', 'Hispanic', 'White', 'Mixed', 'Prefer not to say']} value={data.ethnicity} onChange={v => setData({...data, ethnicity: v})} />
+                <Field label="Ethnicity (Optional)" section="personal" isSelect options={['South Asian', 'East Asian', 'African', 'Hispanic', 'White', 'Mixed', 'Prefer not to say']} value={profileData.ethnicity} onChange={v => setProfileData({...data, ethnicity: v})} />
               </div>
             </div>
           </section>
@@ -431,7 +521,7 @@ const Profile = () => {
               <span className="block text-[11px] text-[#94A3B8] mb-3">Affects your biomarker reference ranges</span>
               <div className="flex flex-wrap gap-2">
                 {['Type 2 Diabetes', 'Type 1 Diabetes', 'Hypertension', 'Hypothyroidism', 'Hyperthyroidism', 'High Cholesterol', 'Anaemia', 'PCOS', 'Asthma', 'Kidney Disease', 'Liver Disease', 'Heart Disease', 'None'].map(cond => {
-                  const active = data.conditions.includes(cond);
+                  const active = profileData.conditions.includes(cond);
                   return (
                     <button key={cond} disabled={!editMode.health} onClick={() => handleArrayToggle('conditions', cond)} className={`px-[14px] py-[6px] text-[12px] rounded-[20px] transition-colors border outline-none disabled:opacity-80 ${active ? 'bg-[#F0FDFA] border-[#0D9488] text-[#0F6E56] font-medium' : 'bg-white border-[#E2E8F0] text-[#475569] hover:border-[#0D9488] hover:text-[#0D9488] hover:bg-[#F8FFFE]'}`}>
                       {cond}
@@ -451,7 +541,7 @@ const Profile = () => {
                 </div>
               </div>
               <div className={`w-full min-h-[44px] rounded-[8px] p-1.5 flex flex-wrap gap-1.5 items-center transition-all ${editMode.health ? 'bg-white border border-[#D1D5DB] focus-within:border-[#0D9488] focus-within:ring-[3px] focus-within:ring-[#0D9488]/10' : 'bg-[#F8FAFC] border border-[#E2E8F0] pointer-events-none'}`}>
-                {data.medications.map(med => (
+                {profileData.medications.map(med => (
                   <div key={med} className="flex items-center gap-1 bg-[#F0FDFA] border border-[#CCFBF1] text-[#0F6E56] text-[12px] px-2 py-0.5 rounded-[6px]">
                     {med} {editMode.health && <X size={12} className="text-[#0D9488] cursor-pointer hover:text-[#0F6E56]" onClick={() => removeMedication(med)} />}
                   </div>
@@ -473,11 +563,11 @@ const Profile = () => {
             {/* C. Allergies */}
             <div className="pb-5 border-b border-[#F1F5F9] mb-5">
               <span className="block text-[12px] font-semibold text-[#94A3B8] uppercase tracking-[0.06em] mb-2">Allergies</span>
-              <input type="text" placeholder="e.g. Penicillin, Sulfa drugs, Latex" readOnly={!editMode.health} value={data.allergies} onChange={e => setData({...data, allergies: e.target.value})} className={`w-full rounded-[8px] px-3 py-[10px] text-[14px] outline-none transition-all ${editMode.health ? 'bg-white border border-[#D1D5DB] focus:border-[#0D9488] focus:ring-[3px] focus:ring-[#0D9488]/10' : 'bg-[#F8FAFC] border border-[#E2E8F0] pointer-events-none'}`} />
+              <input type="text" placeholder="e.g. Penicillin, Sulfa drugs, Latex" readOnly={!editMode.health} value={profileData.allergies} onChange={e => setProfileData({...data, allergies: e.target.value})} className={`w-full rounded-[8px] px-3 py-[10px] text-[14px] outline-none transition-all ${editMode.health ? 'bg-white border border-[#D1D5DB] focus:border-[#0D9488] focus:ring-[3px] focus:ring-[#0D9488]/10' : 'bg-[#F8FAFC] border border-[#E2E8F0] pointer-events-none'}`} />
             </div>
 
             {/* D. Pregnancy (Female only) */}
-            {data.sex === 'Female' && (
+            {profileData.sex === 'Female' && (
               <div className="pb-5 border-b border-[#F1F5F9] mb-5">
                 <span className="block text-[12px] font-semibold text-[#94A3B8] uppercase tracking-[0.06em] mb-2">Pregnancy Status</span>
                 <div className="flex items-center justify-between p-3 sm:px-4 bg-[#FAFAFA] border border-[#E2E8F0] rounded-[10px]">
@@ -485,9 +575,9 @@ const Profile = () => {
                     <span className="text-[14px] font-medium text-[#0F172A]">Currently pregnant</span>
                     <span className="text-[11px] text-[#94A3B8]">Significantly affects reference ranges</span>
                   </div>
-                  <Toggle checked={data.pregnant} onChange={v => setData({...data, pregnant: v})} disabled={!editMode.health} />
+                  <Toggle checked={profileData.pregnant} onChange={v => setProfileData({...data, pregnant: v})} disabled={!editMode.health} />
                 </div>
-                {data.pregnant && (
+                {profileData.pregnant && (
                   <div className="mt-3 bg-[#FFFBEB] border border-[#FDE68A] p-2.5 rounded-[8px] flex items-center gap-2">
                     <AlertTriangle size={14} className="text-[#D97706]" />
                     <span className="text-[12px] text-[#92400E]">Your analysis will be adjusted for pregnancy.</span>
@@ -501,7 +591,7 @@ const Profile = () => {
               <span className="block text-[12px] font-semibold text-[#94A3B8] uppercase tracking-[0.06em] mb-3">Family History (Optional)</span>
               <div className="flex flex-wrap gap-2">
                 {['Diabetes', 'Heart Disease', 'Cancer', 'Hypertension', 'Thyroid disorders', 'Stroke', 'None'].map(cond => {
-                  const active = data.familyHistory.includes(cond);
+                  const active = profileData.familyHistory.includes(cond);
                   return (
                     <button key={cond} disabled={!editMode.health} onClick={() => handleArrayToggle('familyHistory', cond)} className={`px-[14px] py-[6px] text-[12px] rounded-[20px] transition-colors border outline-none disabled:opacity-80 ${active ? 'bg-[#F0FDFA] border-[#0D9488] text-[#0F6E56] font-medium' : 'bg-white border-[#E2E8F0] text-[#475569] hover:border-[#0D9488] hover:text-[#0D9488] hover:bg-[#F8FFFE]'}`}>
                       {cond}
@@ -523,7 +613,7 @@ const Profile = () => {
                   <span className="text-[14px] font-medium text-[#0F172A]">AI output language</span>
                   <span className="text-[12px] text-[#94A3B8] mt-0.5 hidden sm:block">Reports will be explained in this language</span>
                 </div>
-                <select disabled={!editMode.preferences} value={data.language} onChange={e=>setData({...data, language:e.target.value})} className={`w-[120px] sm:w-[160px] rounded-[8px] px-3 py-2 text-[13px] outline-none ${editMode.preferences ? 'bg-white border border-[#D1D5DB] cursor-pointer' : 'bg-[#F8FAFC] border border-[#E2E8F0] pointer-events-none'}`}>
+                <select disabled={!editMode.preferences} value={profileData.language} onChange={e=>setProfileData({...data, language:e.target.value})} className={`w-[120px] sm:w-[160px] rounded-[8px] px-3 py-2 text-[13px] outline-none ${editMode.preferences ? 'bg-white border border-[#D1D5DB] cursor-pointer' : 'bg-[#F8FAFC] border border-[#E2E8F0] pointer-events-none'}`}>
                   {['English', 'हिंदी', 'தமிழ்', 'తెలుగు', 'বাংলা', 'मराठी', 'ગુજરાતી'].map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
@@ -534,8 +624,8 @@ const Profile = () => {
                   <span className="text-[12px] text-[#94A3B8] mt-0.5 hidden sm:block">Height, weight, and lab values</span>
                 </div>
                 <div className="flex bg-[#F1F5F9] p-0.5 rounded-[8px]">
-                  <button disabled={!editMode.preferences} onClick={() => setData({...data, units:'Metric'})} className={`px-3 py-1 text-[11px] rounded-[6px] font-medium ${data.units==='Metric' ? 'bg-[#0F6E56] text-white' : 'text-[#6B7280]'}`}>Metric · kg, cm</button>
-                  <button disabled={!editMode.preferences} onClick={() => setData({...data, units:'Imperial'})} className={`px-3 py-1 text-[11px] rounded-[6px] font-medium ${data.units==='Imperial' ? 'bg-[#0F6E56] text-white' : 'text-[#6B7280]'}`}>Imperial · lbs, ft</button>
+                  <button disabled={!editMode.preferences} onClick={() => setProfileData({...data, units:'Metric'})} className={`px-3 py-1 text-[11px] rounded-[6px] font-medium ${profileData.units==='Metric' ? 'bg-[#0F6E56] text-white' : 'text-[#6B7280]'}`}>Metric · kg, cm</button>
+                  <button disabled={!editMode.preferences} onClick={() => setProfileData({...data, units:'Imperial'})} className={`px-3 py-1 text-[11px] rounded-[6px] font-medium ${profileData.units==='Imperial' ? 'bg-[#0F6E56] text-white' : 'text-[#6B7280]'}`}>Imperial · lbs, ft</button>
                 </div>
               </div>
 
@@ -544,7 +634,7 @@ const Profile = () => {
                   <span className="text-[14px] font-medium text-[#0F172A]">Report sharing</span>
                   <span className="text-[12px] text-[#94A3B8] mt-0.5 hidden sm:block">Who can open your shared report links</span>
                 </div>
-                <select disabled={!editMode.preferences} value={data.visibility} onChange={e=>setData({...data, visibility:e.target.value})} className={`w-[140px] sm:w-[160px] rounded-[8px] px-3 py-2 text-[13px] outline-none ${editMode.preferences ? 'bg-white border border-[#D1D5DB] cursor-pointer' : 'bg-[#F8FAFC] border border-[#E2E8F0] pointer-events-none'}`}>
+                <select disabled={!editMode.preferences} value={profileData.visibility} onChange={e=>setProfileData({...data, visibility:e.target.value})} className={`w-[140px] sm:w-[160px] rounded-[8px] px-3 py-2 text-[13px] outline-none ${editMode.preferences ? 'bg-white border border-[#D1D5DB] cursor-pointer' : 'bg-[#F8FAFC] border border-[#E2E8F0] pointer-events-none'}`}>
                   <option value="Only me">Only me</option>
                   <option value="Anyone with link">Anyone with link</option>
                   <option value="doctor" disabled>My doctor (soon)</option>
@@ -556,7 +646,7 @@ const Profile = () => {
                   <span className="text-[14px] font-medium text-[#0F172A]">Email notifications</span>
                   <span className="text-[12px] text-[#94A3B8] mt-0.5 hidden sm:block">Reminders and health alerts via email</span>
                 </div>
-                <Toggle checked={data.emailNotifs} onChange={v => setData({...data, emailNotifs:v})} disabled={!editMode.preferences} />
+                <Toggle checked={profileData.emailNotifs} onChange={v => setProfileData({...data, emailNotifs:v})} disabled={!editMode.preferences} />
               </div>
 
               <div className="flex justify-between items-center py-3.5">
@@ -564,7 +654,7 @@ const Profile = () => {
                   <span className="text-[14px] font-medium text-[#0F172A]">Weekly health digest</span>
                   <span className="text-[12px] text-[#94A3B8] mt-0.5 hidden sm:block">Health summary every Sunday morning</span>
                 </div>
-                <Toggle checked={data.weeklyDigest} onChange={v => setData({...data, weeklyDigest:v})} disabled={!editMode.preferences} />
+                <Toggle checked={profileData.weeklyDigest} onChange={v => setProfileData({...data, weeklyDigest:v})} disabled={!editMode.preferences} />
               </div>
             </div>
           </section>
@@ -722,7 +812,7 @@ const Profile = () => {
             </div>
             <h3 className="text-[18px] font-bold text-[#0F172A] text-center">Delete account?</h3>
             <p className="text-[14px] text-[#475569] text-center mt-3 mb-4 leading-relaxed">
-              This will permanently delete your account and all data.
+              This will permanently delete your account and all profileData.
             </p>
             <div className="w-full mb-6">
               <span className="text-[12px] text-[#94A3B8] font-medium block mb-1.5">Type DELETE to confirm</span>
