@@ -55,88 +55,6 @@ dashboardData = {
 }
 */
 
-// TODO: Replace with API call to GET /api/dashboard
-const mockData = {
-  user: {
-    firstName: localStorage.getItem('snjvni-name') || "Vaibhav",
-    lastName: "Chauhan",
-    avatarUrl: null,
-    healthScore: 6.4,
-    healthStatus: "needs_attention",
-    streakCount: 2,
-  },
-  latestReport: {
-    id: "rep_123",
-    date: "Mar 19, 2026",
-    type: "Blood Panel + Thyroid",
-    overallScore: 6.4,
-    status: "needs_attention",
-    flaggedCount: 3,
-    totalMarkers: 34,
-  },
-  flaggedMarkers: [
-    {
-      id: "mk_1",
-      name: "TSH",
-      plainName: "Thyroid stimulating hormone",
-      value: "6.8",
-      unit: "mIU/L",
-      status: "high",
-      trend: "worsening",
-      trendDelta: "+1.2 since last report",
-      bodySystem: "Thyroid",
-      reportId: "rep_123",
-    },
-    {
-      id: "mk_2",
-      name: "Haemoglobin",
-      plainName: "Iron-rich protein in red blood cells",
-      value: "11.2",
-      unit: "g/dL",
-      status: "low",
-      trend: "stable",
-      trendDelta: "No change",
-      bodySystem: "Blood",
-      reportId: "rep_123",
-    },
-    {
-      id: "mk_3",
-      name: "Vitamin D",
-      plainName: "Calcifediol",
-      value: "18",
-      unit: "ng/mL",
-      status: "critical",
-      trend: "improving",
-      trendDelta: "+4 since last report",
-      bodySystem: "Bone Health",
-      reportId: "rep_123",
-    }
-  ],
-  insights: [
-    {
-      id: "in_1",
-      type: "trend_alert",
-      title: "TSH levels are rising",
-      body: "Your TSH has increased outside the optimal range. This might indicate an underactive thyroid (hypothyroidism).",
-      relatedMarker: "TSH",
-      severity: "warning",
-      actionLabel: "Read more",
-      actionRoute: "/report/rep_123#tsh",
-    },
-    {
-      id: "in_2",
-      type: "habit",
-      title: "Boost your Iron absorption",
-      body: "Since your Haemoglobin is low, try combining iron-rich foods (like spinach) with Vitamin C to increase absorption by up to 30%.",
-      relatedMarker: "Haemoglobin",
-      severity: "info",
-      actionLabel: "View diet shifts",
-      actionRoute: "/habits",
-    }
-  ],
-  hasReports: true,
-};
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
@@ -151,11 +69,33 @@ const Dashboard = () => {
   const textareaRef = useRef(null);
 
   useEffect(() => {
-    // TODO: Connect to actual API
-    setTimeout(() => {
-      setData(mockData);
-      setLoading(false);
-    }, 800);
+    const fetchDashboard = async () => {
+      try {
+        setLoading(true)
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (!session) {
+           navigate('/')
+           return
+        }
+
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/dashboard`, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        })
+        
+        if (res.ok) {
+           const dbData = await res.json()
+           setData(dbData)
+        }
+      } catch (e) {
+        console.error('Fetch dashboard failed', e)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchDashboard()
   }, []);
 
   const getGreeting = () => {

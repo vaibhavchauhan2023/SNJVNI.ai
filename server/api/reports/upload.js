@@ -86,7 +86,7 @@ router.post('/', requireAuth, upload.single('report'), async (req, res) => {
             language
           `)
           .eq('id', userId)
-          .single()
+          .maybeSingle()
 
         console.log('User profile for context:', profile)
 

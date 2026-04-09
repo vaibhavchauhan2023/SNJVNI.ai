@@ -5,6 +5,7 @@ import { GoogleGenAI } from '@google/genai';
 import uploadRoutes from './api/reports/upload.js';
 import getReportRouter from './api/reports/[id].js';
 import ionRoutes from './api/ion/chat.js';
+import dashboardRoutes from './api/dashboard/index.js';
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -37,6 +38,7 @@ app.get('/health', (req, res) => {
 app.use('/api/reports/upload', uploadRoutes);
 app.use('/api/reports', getReportRouter);
 app.use('/api/ion/chat', ionRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Generic Gemini generate endpoint
 app.post('/api/generate', async (req, res) => {
