@@ -1,28 +1,155 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DateOfBirthPicker from "./DateOfBirthPicker";
+import { supabase } from '../lib/supabase';
 
 const OnboardingWizard = () => {
   const [step, setStep] = useState(1);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [sex, setSex] = useState("");
-  const [dob, setDob] = useState();
-  const [heightUnit, setHeightUnit] = useState("cm");
-  const [showOtherCondition, setShowOtherCondition] = useState(false);
-  const [otherCondition, setOtherCondition] = useState("");
-  const [selectedGoals, setSelectedGoals] = useState([]);
   const navigate = useNavigate();
 
-  const nextStep = () => setStep(step + 1);
+  const [formData, setFormData] = useState({
+    dateOfBirth: "",
+    sex: "",
+    height: "",
+    weight: "",
+    language: "English",
+    conditions: [],
+    medications: [],
+    allergies: "",
+    goals: [],
+    testFrequency: "",
+    units: "metric"
+  });
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [noMedications, setNoMedications] = useState(false);
+  const [showOtherCondition, setShowOtherCondition] = useState(false);
+  const [otherCondition, setOtherCondition] = useState("");
+  const [heightUnit, setHeightUnit] = useState("cm");
+
+  const saveToProfile = async (data) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: session.user.id,
+          ...data,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'id'
+        })
+      
+      if (error) {
+        console.error('Profile save error:', error)
+      } else {
+        console.log('Profile saved:', data)
+      }
+    } catch (err) {
+      console.error('Save failed:', err)
+    }
+  }
+
+  const handleStep1Next = async () => {
+    const errors = {}
+    if (!formData.dateOfBirth) errors.dateOfBirth = 'Required'
+    if (!formData.sex) errors.sex = 'Required'
+    if (!formData.height) errors.height = 'Required'
+    if (!formData.weight) errors.weight = 'Required'
+    
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      return
+    }
+    setFieldErrors({})
+    
+    const dob = new Date(formData.dateOfBirth)
+    const age = Math.floor((new Date() - dob) / (365.25 * 24 * 60 * 60 * 1000))
+    
+    await saveToProfile({
+      age: age,
+      sex: formData.sex,
+      height: parseFloat(formData.height),
+      weight: parseFloat(formData.weight),
+      language: formData.language || 'English'
+    })
+    
+    setStep(2)
+  }
+
+  const handleStep2Next = async () => {
+    let finalConditions = [...formData.conditions];
+    if (showOtherCondition && otherCondition) {
+      if (!finalConditions.includes(otherCondition)) {
+        finalConditions.push(otherCondition);
+      }
+    }
+    const errors = {}
+    
+    if (finalConditions.length === 0) {
+      errors.conditions = 'Please select at least one option'
+    }
+    
+    if (!formData.medications || formData.medications.length === 0) {
+      errors.medications = 'Please add medications or select None'
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors({...errors, ...{conditions: errors.conditions ? errors.conditions : undefined}})
+      return
+    }
+    setFieldErrors({})
+    
+    await saveToProfile({
+      conditions: finalConditions,
+      medications: formData.medications,
+      allergies: formData.allergies || null
+    })
+    
+    setStep(3)
+  }
+
+  const handleStep3Complete = async () => {
+    const errors = {}
+    
+    if (!formData.goals || formData.goals.length === 0) {
+      errors.goals = 'Please select at least one goal'
+    }
+    
+    if (!formData.testFrequency) {
+      errors.testFrequency = 'Please select how often you test'
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      return
+    }
+    setFieldErrors({})
+    
+    await saveToProfile({
+      units: formData.units || 'metric',
+      language: formData.language || 'English'
+    })
+    
+    window.location.href = '/dashboard'
+  }
+
+  const handleSkip = () => {
+    setStep(2)
+  }
+
+  const completeOnboarding = handleStep3Complete;
   const prevStep = () => setStep(step - 1);
-  const completeOnboarding = () => setIsCompleted(true);
 
   const handleGoalChange = (goal) => {
-    setSelectedGoals((prev) =>
-      prev.includes(goal)
-        ? prev.filter((item) => item !== goal)
-        : [...prev, goal]
-    );
+    setFormData((prev) => ({
+      ...prev,
+      goals: prev.goals.includes(goal)
+        ? prev.goals.filter((item) => item !== goal)
+        : [...prev.goals, goal]
+    }));
   };
 
   if (isCompleted) {
@@ -196,9 +323,10 @@ const OnboardingWizard = () => {
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div>
                 <DateOfBirthPicker
-                  value={dob}
-                  onChange={(date) => setDob(date)}
+                  value={formData.dateOfBirth}
+                  onChange={(date) => setFormData(prev => ({...prev, dateOfBirth: date}))}
                 />
+                {fieldErrors.dateOfBirth && <p style={{fontSize:'12px', color:'#DC2626', marginTop:'4px'}}>{fieldErrors.dateOfBirth}</p>}
               </div>
 
               <div>
@@ -206,7 +334,8 @@ const OnboardingWizard = () => {
                   Biological Sex
                 </label>
                 <select
-                  onChange={(e) => setSex(e.target.value)}
+                  value={formData.sex}
+                  onChange={(e) => setFormData(prev => ({...prev, sex: e.target.value}))}
                   className="mt-1 block w-full rounded-xl border border-[#A8CECC] bg-white p-3 shadow-sm outline-none transition focus:border-[#16AFA2]"
                 >
                   <option value="">Select</option>
@@ -216,6 +345,7 @@ const OnboardingWizard = () => {
                   <option value="other">Other</option>
                   <option value="prefer_not_to_say">Prefer not to say</option>
                 </select>
+                {fieldErrors.sex && <p style={{fontSize:'12px', color:'#DC2626', marginTop:'4px'}}>{fieldErrors.sex}</p>}
               </div>
 
               <div>
@@ -225,6 +355,8 @@ const OnboardingWizard = () => {
                 <div className="mt-1 flex gap-2">
                   <input
                     type="number"
+                    value={formData.height}
+                    onChange={(e) => setFormData(prev => ({...prev, height: e.target.value}))}
                     placeholder={heightUnit === "cm" ? "175" : "5.8"}
                     className="block w-full rounded-xl border border-[#A8CECC] bg-white p-3 shadow-sm outline-none transition focus:border-[#16AFA2]"
                   />
@@ -237,6 +369,7 @@ const OnboardingWizard = () => {
                     <option value="ft">ft</option>
                   </select>
                 </div>
+                {fieldErrors.height && <p style={{fontSize:'12px', color:'#DC2626', marginTop:'4px'}}>{fieldErrors.height}</p>}
               </div>
 
               <div>
@@ -245,9 +378,12 @@ const OnboardingWizard = () => {
                 </label>
                 <input
                   type="number"
+                  value={formData.weight}
+                  onChange={(e) => setFormData(prev => ({...prev, weight: e.target.value}))}
                   placeholder="70"
                   className="mt-1 block w-full rounded-xl border border-[#A8CECC] bg-white p-3 shadow-sm outline-none transition focus:border-[#16AFA2]"
                 />
+                {fieldErrors.weight && <p style={{fontSize:'12px', color:'#DC2626', marginTop:'4px'}}>{fieldErrors.weight}</p>}
               </div>
             </div>
           </div>
@@ -274,6 +410,11 @@ const OnboardingWizard = () => {
                       <div className="flex items-center">
                         <input
                           type="checkbox"
+                          checked={formData.conditions.includes(item)}
+                          onChange={(e) => {
+                            if (e.target.checked) setFormData(p => ({...p, conditions: [...p.conditions, item]}));
+                            else setFormData(p => ({...p, conditions: p.conditions.filter(i => i !== item)}));
+                          }}
                           className="h-4 w-4 rounded border-[#A8CECC] text-[#16AFA2] focus:ring-[#16AFA2]"
                         />
                         <span className="ml-2 text-sm text-[#0A5C58]">
@@ -299,6 +440,7 @@ const OnboardingWizard = () => {
                   </div>
                 </label>
               </div>
+              {fieldErrors.conditions && <p style={{fontSize:'12px', color:'#DC2626', marginTop:'4px'}}>{fieldErrors.conditions}</p>}
 
               {showOtherCondition && (
                 <div>
@@ -315,13 +457,15 @@ const OnboardingWizard = () => {
                 </div>
               )}
 
-              {sex === "female" && (
+              {formData.sex === "female" && (
                 <div className="flex items-center justify-between rounded-xl border border-[#D0F4F2] bg-[#D0F4F2] p-4">
                   <span className="text-sm font-medium text-[#0A5C58]">
                     Are you currently pregnant?
                   </span>
                   <input
                     type="checkbox"
+                    checked={formData.isPregnant}
+                    onChange={(e) => setFormData(p => ({...p, isPregnant: e.target.checked}))}
                     className="h-5 w-5 rounded-full text-[#16AFA2] focus:ring-[#16AFA2]"
                   />
                 </div>
@@ -333,9 +477,28 @@ const OnboardingWizard = () => {
                 </label>
                 <textarea
                   rows="3"
+                  value={noMedications ? 'None' : formData.medications.join(', ')}
+                  disabled={noMedications}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData(p => ({...p, medications: val ? val.split(',').map(s=>s.trim()).filter(Boolean) : []}))
+                  }}
                   className="mt-1 block w-full rounded-xl border border-[#A8CECC] p-3 shadow-sm outline-none transition focus:border-[#16AFA2]"
                   placeholder="List medications you take regularly..."
                 />
+                <label className="flex items-center mt-2 cursor-pointer">
+                  <input type="checkbox" 
+                    checked={noMedications} 
+                    onChange={(e) => {
+                       setNoMedications(e.target.checked);
+                       if (e.target.checked) setFormData(p => ({...p, medications: ['None']}));
+                       else setFormData(p => ({...p, medications: []}));
+                    }} 
+                    className="h-4 w-4 rounded border-[#A8CECC] text-[#16AFA2] focus:ring-[#16AFA2]" 
+                  />
+                  <span className="ml-2 text-sm text-[#0A5C58]">No current medications</span>
+                </label>
+                {fieldErrors.medications && <p style={{fontSize:'12px', color:'#DC2626', marginTop:'4px'}}>{fieldErrors.medications}</p>}
               </div>
             </div>
           </div>
@@ -357,14 +520,14 @@ const OnboardingWizard = () => {
                 <label
                   key={goal}
                   className={`flex cursor-pointer items-center rounded-2xl border p-4 transition-all ${
-                    selectedGoals.includes(goal)
+                    formData.goals && formData.goals.includes(goal)
                       ? "border-[#16AFA2] bg-[#D0F4F2]"
                       : "border-[#D0F4F2] hover:border-[#16AFA2] hover:bg-[#D0F4F2]"
                   }`}
                 >
                   <input
                     type="checkbox"
-                    checked={selectedGoals.includes(goal)}
+                    checked={formData.goals && formData.goals.includes(goal)}
                     onChange={() => handleGoalChange(goal)}
                     className="h-4 w-4 rounded border-[#A8CECC] text-[#16AFA2] focus:ring-[#16AFA2]"
                   />
@@ -373,6 +536,25 @@ const OnboardingWizard = () => {
                   </span>
                 </label>
               ))}
+              <div className="mt-1">
+                {fieldErrors.goals && <p style={{fontSize:'12px', color:'#DC2626', marginTop:'4px'}}>{fieldErrors.goals}</p>}
+              </div>
+              
+              <div className="mt-8">
+                <label className="block text-sm font-medium text-[#0A5C58]">Test Frequency</label>
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  {["Monthly", "Quarterly", "Yearly", "Rarely"].map((freq) => (
+                    <label key={freq} className={`cursor-pointer rounded-xl border p-3 transition-colors ${formData.testFrequency === freq ? 'border-[#16AFA2] bg-[#D0F4F2]' : 'border-[#D0F4F2] hover:bg-[#D0F4F2]'}`}>
+                      <div className="flex items-center">
+                        <input type="radio" checked={formData.testFrequency === freq} onChange={() => setFormData(p => ({...p, testFrequency: freq}))} className="h-4 w-4 text-[#16AFA2]" />
+                        <span className="ml-2 text-sm text-[#0A5C58]">{freq}</span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                {fieldErrors.testFrequency && <p style={{fontSize:'12px', color:'#DC2626', marginTop:'4px'}}>{fieldErrors.testFrequency}</p>}
+              </div>
+
             </div>
           </div>
         )}
@@ -389,15 +571,17 @@ const OnboardingWizard = () => {
           </button>
 
           <div className="flex space-x-4">
-            <button
-              onClick={step === 3 ? completeOnboarding : nextStep}
-              className="text-sm font-semibold text-[#7AB8B5] hover:text-[#4A9B97]"
-            >
-              Skip for now
-            </button>
+            {step === 1 && (
+              <button
+                onClick={handleSkip}
+                className="text-sm font-semibold text-[#7AB8B5] hover:text-[#4A9B97]"
+              >
+                Skip for now
+              </button>
+            )}
 
             <button
-              onClick={step === 3 ? completeOnboarding : nextStep}
+              onClick={() => step === 1 ? handleStep1Next() : step === 2 ? handleStep2Next() : handleStep3Complete()}
               className="rounded-xl bg-[#16AFA2] px-8 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0D7A75]"
             >
               {step === 3 ? "Finish" : "Next Step"}

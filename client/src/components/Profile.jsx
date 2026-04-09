@@ -25,21 +25,21 @@ const Profile = () => {
   // -- FORM DATA --
   const [data, setData] = useState({
     firstName: userName,
-    lastName: 'Chauhan',
-    email: 'vaibhav@example.com',
-    dob: '1982-06-15',
-    sex: 'Male',
-    height: '175',
+    lastName: '',
+    email: '',
+    dob: '',
+    sex: '',
+    height: '',
     heightUnit: 'cm',
-    weight: '72',
+    weight: '',
     weightUnit: 'kg',
-    ethnicity: 'South Asian',
+    ethnicity: '',
 
-    conditions: ['Hypertension'],
-    medications: ['Amlodipine'],
+    conditions: [],
+    medications: [],
     allergies: 'None',
     pregnant: false,
-    familyHistory: ['Diabetes', 'Heart Disease'],
+    familyHistory: [],
 
     language: 'English',
     units: 'Metric',
@@ -47,6 +47,50 @@ const Profile = () => {
     emailNotifs: true,
     weeklyDigest: true,
   });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+      
+      if (error) {
+        console.error('Profile fetch error:', error)
+        return
+      }
+      
+      if (profileData) {
+        const full = profileData.full_name || session.user.user_metadata?.full_name || '';
+        const parts = full.split(' ');
+        const first = parts[0] || '';
+        const last = parts.slice(1).join(' ');
+
+        setData(prev => ({
+          ...prev,
+          firstName: first,
+          lastName: last,
+          email: session.user.email || '',
+          dob: profileData.age || '', // Assuming age maps roughly or DB holds DOB directly? Let's use age for dob field for now based on rules
+          sex: profileData.sex || '',
+          height: profileData.height || '',
+          weight: profileData.weight || '',
+          conditions: profileData.conditions || [],
+          medications: profileData.medications || [],
+          allergies: profileData.allergies || 'None',
+          language: profileData.language || 'English',
+          units: profileData.units || 'Metric',
+          // User requested mapping explicitly:
+        }))
+      }
+    }
+    
+    fetchProfile()
+  }, [])
 
   // -- UI STATES --
   const [medInput, setMedInput] = useState('');
@@ -73,15 +117,66 @@ const Profile = () => {
   };
 
   // -- HANDLERS --
-  const handleSave = (section) => {
+  const saveProfileSection = async (sectionData) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return { success: false }
+    
+    // Note: Run this SQL in Supabase SQL Editor:
+    // ALTER TABLE profiles ADD COLUMN IF NOT EXISTS updated_at timestamptz;
+    // ALTER TABLE profiles ADD COLUMN IF NOT EXISTS allergies text;
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        id: session.user.id,
+        ...sectionData,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' })
+    
+    if (error) {
+      console.error('Save error:', error)
+      return { success: false, error }
+    }
+    
+    return { success: true }
+  }
+
+  const handleSave = async (section) => {
     setSaving(p => ({ ...p, [section]: true }));
-    setTimeout(() => {
-      setSaving(p => ({ ...p, [section]: false }));
+
+    let sectionData = {};
+    if (section === 'personal') {
+      sectionData = {
+        full_name: `${data.firstName} ${data.lastName}`.trim(),
+        sex: data.sex,
+        height: parseFloat(data.height) || null,
+        weight: parseFloat(data.weight) || null,
+        age: parseInt(data.dob) || null // mapped back to age based on request
+      };
+    } else if (section === 'health') {
+      sectionData = {
+        conditions: data.conditions,
+        medications: data.medications,
+        allergies: data.allergies,
+      };
+    } else if (section === 'preferences') {
+      sectionData = {
+        language: data.language,
+        units: data.units,
+      };
+    }
+    
+    const { success, error } = await saveProfileSection(sectionData);
+
+    setSaving(p => ({ ...p, [section]: false }));
+    
+    if (success) {
       setSaved(p => ({ ...p, [section]: true }));
       setEditMode(p => ({ ...p, [section]: false }));
       showToast(`${section.charAt(0).toUpperCase() + section.slice(1)} updated successfully`);
       setTimeout(() => setSaved(p => ({ ...p, [section]: false })), 2000);
-    }, 1000);
+    } else {
+      showToast('Update failed: ' + (error?.message || 'Unknown error'), true);
+    }
   };
 
   const showToast = (message, isError = false) => {
