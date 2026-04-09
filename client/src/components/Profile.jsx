@@ -4,7 +4,7 @@ import {
   Check, Info, Eye, EyeOff, Trash2, X, Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.js';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -164,9 +164,7 @@ const Profile = () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
-      const fullName = `{profileData.firstName} {profileData.lastName}".replace('`', '`').replace('"', '`').strip() 
-      // Workaround for python string formatting vs javascript template literals:
-      const javascriptFullName = `${profileData.firstName} ${profileData.lastName}`.trim()
+      const javascriptFullName = `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim()
 
       // Update profiles table
       const { error: profileError } = await supabase
