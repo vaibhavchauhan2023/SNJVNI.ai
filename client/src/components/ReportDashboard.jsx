@@ -236,6 +236,27 @@ const ReportDashboard = () => {
     ionEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [ionMessages, ionLoading]);
 
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      try {
+        const { data } = await supabase
+          .from('ion_conversations')
+          .select('messages')
+          .eq('report_id', id)
+          .single()
+        
+        if (data?.messages?.length > 0) {
+          setIonMessages(data.messages)
+        }
+      } catch (err) {
+        // No existing conversation — that is fine
+        console.log('No existing ION conversation')
+      }
+    }
+    
+    if (id) loadChatHistory()
+  }, [id])
+
   // Handle loading and null data gracefully after hooks
   if (loading || !reportData) {
       return (
@@ -252,27 +273,59 @@ const ReportDashboard = () => {
   };
 
   const sendIonMessage = async () => {
-    if (!ionInput.trim()) return;
-    const userMessage = { role: 'user', content: ionInput };
-    setIonMessages((prev) => [...prev, userMessage]);
-    setIonInput('');
-    setIonLoading(true);
+    if (!ionInput.trim() || ionLoading) return
+    
+    const userMessage = { 
+      role: 'user', 
+      content: ionInput.trim() 
+    }
+    
+    setIonMessages(prev => [...prev, userMessage])
+    const currentInput = ionInput.trim()
+    setIonInput('')
+    setIonLoading(true)
 
-    // TODO: Replace with real API call
-    // POST /api/ion/chat
-    // Body: { message: ionInput, reportId: report.id,
-    //         history: ionMessages, patientContext: patient }
-    setTimeout(() => {
-      setIonMessages((prev) => [
-        ...prev,
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/ion/chat`,
         {
-          role: 'ion',
-          content: `Based on your report, I can see your ${ionInput.toLowerCase().includes('tsh') ? 'TSH' : 'markers'} need attention. Would you like me to explain what this means for your daily routine?`,
-        },
-      ]);
-      setIonLoading(false);
-    }, 1200);
-  };
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: currentInput,
+            reportId: id,
+            history: ionMessages
+          })
+        }
+      )
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Chat failed')
+      }
+
+      const { reply } = await res.json()
+      
+      setIonMessages(prev => [...prev, {
+        role: 'ion',
+        content: reply
+      }])
+
+    } catch (error) {
+      console.error('ION chat error:', error)
+      setIonMessages(prev => [...prev, {
+        role: 'ion',
+        content: 'Sorry, I had trouble responding. Please try again.'
+      }])
+    } finally {
+      setIonLoading(false)
+    }
+  }
 
   const handleShare = async () => {
     // TODO: Replace with real API call

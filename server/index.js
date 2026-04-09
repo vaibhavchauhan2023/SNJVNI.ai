@@ -1,11 +1,10 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
 import uploadRoutes from './api/reports/upload.js';
 import getReportRouter from './api/reports/[id].js';
-
-dotenv.config();
+import ionRoutes from './api/ion/chat.js';
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -37,6 +36,7 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/api/reports/upload', uploadRoutes);
 app.use('/api/reports', getReportRouter);
+app.use('/api/ion/chat', ionRoutes);
 
 // Generic Gemini generate endpoint
 app.post('/api/generate', async (req, res) => {

@@ -66,10 +66,29 @@ router.post('/', requireAuth, upload.single('report'), async (req, res) => {
 
         // ── STEP 3: Fetch user profile for personalisation ──
         const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single()
+          .from('profiles')
+          .select(`
+            full_name,
+            age,
+            date_of_birth,
+            sex,
+            height,
+            weight,
+            height_unit,
+            weight_unit,
+            ethnicity,
+            conditions,
+            medications,
+            allergies,
+            is_pregnant,
+            family_history,
+            track_goals,
+            language
+          `)
+          .eq('id', userId)
+          .single()
+
+        console.log('User profile for context:', profile)
 
         // ── STEP 4: Fetch past report summaries for trend context ──
         const { data: pastReports } = await supabase
@@ -86,34 +105,85 @@ router.post('/', requireAuth, upload.single('report'), async (req, res) => {
 
         // ── STEP 6: Build prompt with user context ──
         const userContext = `
-PATIENT PROFILE:
-- Age: ${profile?.age || 'Unknown'}
-- Sex: ${profile?.sex || 'Unknown'}
-- Existing conditions: ${profile?.conditions?.join(', ') || 'None provided'}
-- Current medications: ${profile?.medications?.join(', ') || 'None provided'}
-- Language preference: ${profile?.language || 'English'}
+=== PATIENT PROFILE CONTEXT ===
+Use this information to personalize the analysis 
+and adjust reference ranges accordingly.
 
-PAST REPORTS CONTEXT:
-${pastReports?.length > 0
-                ? pastReports.map(r =>
-                    `- ${r.title} (Score: ${r.overall_score}/10, ${r.created_at.split('T')[0]})`
-                ).join('\n')
-                : 'No previous reports — this is the first report.'
-            }
+Name: ${profile?.full_name || 'Not provided'}
+Age: ${profile?.age || (profile?.date_of_birth ? 
+  Math.floor((new Date() - new Date(profile.date_of_birth)) / 
+  (365.25 * 24 * 60 * 60 * 1000)) : 'Unknown')} years
+Biological Sex: ${profile?.sex || 'Not provided'}
+Height: ${profile?.height ? 
+  `${profile.height} ${profile.height_unit || 'cm'}` : 
+  'Not provided'}
+Weight: ${profile?.weight ? 
+  `${profile.weight} ${profile.weight_unit || 'kg'}` : 
+  'Not provided'}
+Ethnicity: ${profile?.ethnicity || 'Not provided'}
+Existing conditions: ${
+  profile?.conditions?.length > 0 
+    ? profile.conditions.join(', ') 
+    : 'None reported'
+}
+Current medications: ${
+  profile?.medications?.length > 0 
+    ? profile.medications.join(', ') 
+    : 'None reported'
+}
+Allergies: ${profile?.allergies || 'None reported'}
+Pregnancy status: ${profile?.is_pregnant ? 'Currently pregnant' : 'Not pregnant'}
+Family history: ${
+  profile?.family_history?.length > 0 
+    ? profile.family_history.join(', ') 
+    : 'Not provided'
+}
+Health goals: ${
+  profile?.track_goals?.length > 0 
+    ? profile.track_goals.join(', ') 
+    : 'Not provided'
+}
+Preferred language: ${profile?.language || 'English'}
 
-Analyze the attached medical report image and return the JSON.
+=== PAST REPORTS CONTEXT ===
+${pastReports?.length > 0 
+  ? `This patient has ${pastReports.length} previous report(s):
+${pastReports.map(r => 
+  `- ${r.title} | Score: ${r.overall_score}/10 | Status: ${r.health_status} | Date: ${r.created_at?.split('T')[0]}`
+).join('\n')}
+Compare current results with past reports and 
+note any worsening or improving trends per marker.`
+  : 'This is the patient\'s first report. No historical data available for trend comparison.'
+}
+
+=== ANALYSIS INSTRUCTIONS ===
+1. Adjust ALL reference ranges based on the 
+   patient's age, sex, and existing conditions above.
+2. If the patient is on medications that affect 
+   markers (e.g. statins affect liver enzymes, 
+   metformin affects B12), note this in the 
+   explanation field for those markers.
+3. If pregnant, use pregnancy-specific reference ranges.
+4. Give habit recommendations relevant to Indian 
+   lifestyle — mention dal, roti, seasonal vegetables, 
+   morning walks rather than only Western food references.
+5. Respond in ${profile?.language || 'English'}.
+6. Compare with past reports if available and 
+   set trend field accordingly for each marker.
+
+Now analyze the attached medical report:
 `
 
         // ── STEP 7: Call Gemini Vision API ──
         const result = await reportModel.generateContent([
-            SYSTEM_PROMPT,
-            userContext,
-            {
-                inlineData: {
-                    mimeType: mimeType,
-                    data: base64Data
-                }
+          { text: SYSTEM_PROMPT },
+          { text: userContext },
+          {
+            inlineData: {
+              mimeType: mimeType,
+              data: base64Data
             }
+          }
         ])
 
         const rawResponse = result.response.text()
