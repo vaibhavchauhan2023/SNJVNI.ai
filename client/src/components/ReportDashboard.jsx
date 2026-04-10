@@ -164,18 +164,31 @@ const useResizable = (initialWidth, min, max, storageKey) => {
 const ReportDashboard = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { session } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) return;
+
     const fetchReport = async () => {
       try {
         setLoading(true)
         
-        const { data: { session } } = await supabase.auth.getSession()
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError)
+          return
+        }
+
+        if (!session || !session.user) {
+          console.log('No session yet — waiting for auth')
+          return
+        }
         
         console.log('Fetching report:', id)
         console.log('API URL:', import.meta.env.VITE_API_URL)
@@ -214,7 +227,7 @@ const ReportDashboard = () => {
     }
     
     if (id) fetchReport()
-  }, [id])
+  }, [id, user, authLoading])
 
   // --- Resizable panels ---
   const left = useResizable(220, 180, 340, 'snjvni_left_width');
@@ -258,7 +271,7 @@ const ReportDashboard = () => {
   }, [id])
 
   // Handle loading and null data gracefully after hooks
-  if (loading || !reportData) {
+  if (authLoading || loading || !reportData) {
       return (
           <div className="flex items-center justify-center min-h-screen bg-white">
               <div className="w-[40px] h-[40px] rounded-full border-4 border-[#F0FDFA] border-t-[#0D9488] animate-spin"></div>

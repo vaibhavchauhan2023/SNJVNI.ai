@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.js';
+import { supabase } from '../lib/supabase.js';
 import { 
   UploadCloud, FileText, MessageCircle, Download, AlertTriangle, 
   TrendingUp, TrendingDown, Minus, Leaf, Lightbulb, Calendar, 
@@ -58,6 +60,7 @@ dashboardData = {
 const Dashboard = () => {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
 
   // ION Chat State
@@ -69,15 +72,26 @@ const Dashboard = () => {
   const textareaRef = useRef(null);
 
   useEffect(() => {
-    const fetchDashboard = async () => {
+    if (authLoading) return;
+    if (!user) return;
+
+    const fetchDashboardData = async () => {
       try {
         setLoading(true)
-        const { data: { session } } = await supabase.auth.getSession()
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
-        if (!session) {
-           navigate('/')
-           return
+        if (sessionError) {
+          console.error('Session error:', sessionError)
+          return
         }
+        
+        if (!session || !session.user) {
+          console.log('No session yet — waiting for auth')
+          return
+        }
+        
+        const userId = session.user.id
+        console.log('Dashboard loading for user:', userId)
 
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/dashboard`, {
           headers: {
@@ -89,14 +103,14 @@ const Dashboard = () => {
            const dbData = await res.json()
            setData(dbData)
         }
-      } catch (e) {
-        console.error('Fetch dashboard failed', e)
+      } catch (err) {
+        console.error('Dashboard fetch error:', err)
       } finally {
         setLoading(false)
       }
     }
-    fetchDashboard()
-  }, []);
+    fetchDashboardData()
+  }, [user, authLoading]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -167,6 +181,15 @@ const Dashboard = () => {
       }]);
     }, 1200);
   };
+
+  if (authLoading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <style dangerouslySetInnerHTML={{__html: `@keyframes spin { to { transform: rotate(360deg) } }`}} />
+        <div style={{ width: 32, height: 32, border: '3px solid #E2E8F0', borderTop: '3px solid #0D9488', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#FFFFFF] pb-20 font-body overflow-x-hidden">
