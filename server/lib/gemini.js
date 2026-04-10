@@ -7,7 +7,7 @@ const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
 // Sonnet-equivalent model for report analysis
 export const reportModel = genAI ? genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-1.5-pro',
     generationConfig: {
         responseMimeType: 'application/json', // force JSON output
         temperature: 0.1  // low temp = consistent medical output
@@ -16,7 +16,7 @@ export const reportModel = genAI ? genAI.getGenerativeModel({
 
 // Fast model for ION chat
 export const ionModel = genAI ? genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-1.5-flash',
     generationConfig: {
         temperature: 0.7  // slightly more conversational
     }
