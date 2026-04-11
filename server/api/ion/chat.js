@@ -6,25 +6,36 @@ import { requireAuth } from '../../middleware/auth.js'
 const router = express.Router()
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
-const ION_SYSTEM_PROMPT = `
-You are ION — the AI health assistant for SNJVNI.ai.
-You have access to the patient's medical report data.
-Your job is to answer questions about their report 
-in plain English — calm, clear, and supportive.
+const withRetry = async (fn, retries = 3) => {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fn()
+    } catch (err) {
+      const is429 = err.status === 429 || 
+                    err.message?.includes('429') ||
+                    err.message?.includes('RESOURCE_EXHAUSTED') ||
+                    err.message?.includes('quota')
+      
+      if (is429 && attempt < retries) {
+        const waitMs = attempt * 10000
+        console.log(`Rate limited (attempt ${attempt}/${retries}). Waiting ${waitMs/1000}s...`)
+        await new Promise(resolve => setTimeout(resolve, waitMs))
+        continue
+      }
+      
+      throw err
+    }
+  }
+}
+const ION_SYSTEM_PROMPT = `You are ION, the AI health assistant for SNJVNI.ai. Answer questions about the patient's medical report clearly and supportively.
 
-RULES:
-- Never diagnose. Say "associated with" not "you have"
-- Keep responses to 3-5 sentences unless asked for more
-- Always reference the specific marker values from 
-  the report when answering
-- If a marker is critical, always end with 
-  "Please consult your doctor about this."
-- Be warm and supportive — like a knowledgeable friend
-- Use simple language — no medical jargon without 
-  immediate explanation
-- For Indian users mention Indian food, lifestyle 
-  where relevant
-`
+Rules:
+- Keep responses to 3-5 sentences max
+- Never diagnose — say "associated with"  
+- Reference specific marker values from the report
+- If critical marker involved, end with "Please consult your doctor."
+- Use simple language, explain any medical terms
+- Mention Indian food and lifestyle where relevant for habits`
 
 router.post('/', requireAuth, async (req, res) => {
   try {
@@ -99,13 +110,15 @@ specific report data above.
       }
     ]
 
-    const result = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: contents,
-      config: {
-        systemInstruction: ION_SYSTEM_PROMPT + '\n\n' + reportContext
-      }
-    })
+    const result = await withRetry(() =>
+      ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: contents,
+        config: {
+          systemInstruction: ION_SYSTEM_PROMPT + '\n\n' + reportContext
+        }
+      })
+    )
 
     const reply = result.text
 

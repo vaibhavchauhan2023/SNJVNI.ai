@@ -4,12 +4,36 @@ import { v4 as uuidv4 } from 'uuid'
 import fs from 'fs'
 import { supabase } from '../../lib/supabase.js'
 import { reportModel, SYSTEM_PROMPT } from '../../lib/gemini.js'
-import { fileToBase64, getMimeType } from '../../lib/fileProcessor.js'
+import { 
+  compressImageForGemini, 
+  getMimeType,
+  cleanupFile 
+} from '../../lib/fileProcessor.js'
 import { requireAuth } from '../../middleware/auth.js'
 
 const router = express.Router()
 
-// Multer — save file temporarily
+const withRetry = async (fn, retries = 3) => {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fn()
+    } catch (err) {
+      const is429 = err.status === 429 || 
+                    err.message?.includes('429') ||
+                    err.message?.includes('RESOURCE_EXHAUSTED') ||
+                    err.message?.includes('quota')
+      
+      if (is429 && attempt < retries) {
+        const waitMs = attempt * 10000
+        console.log(`Rate limited (attempt ${attempt}/${retries}). Waiting ${waitMs/1000}s...`)
+        await new Promise(resolve => setTimeout(resolve, waitMs))
+        continue
+      }
+      
+      throw err
+    }
+  }
+}// Multer — save file temporarily
 const upload = multer({
     dest: '/tmp/uploads/',
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB max
@@ -100,91 +124,57 @@ router.post('/', requireAuth, upload.single('report'), async (req, res) => {
             .limit(3)
 
         // ── STEP 5: Convert file to base64 for Gemini ──
-        const base64Data = fileToBase64(tempFilePath)
         const mimeType = getMimeType(file.originalname)
+        const { base64, mimeType: finalMimeType } = await compressImageForGemini(tempFilePath, mimeType)
+        const base64Data = base6
 
         // ── STEP 6: Build prompt with user context ──
-        const userContext = `
-=== PATIENT PROFILE CONTEXT ===
-Use this information to personalize the analysis 
-and adjust reference ranges accordingly.
+        const userContext = `PATIENT CONTEXT:
+Name: ${profile?.full_name || 'Unknown'}
+Age: ${profile?.age || (profile?.date_of_birth ? Math.floor((new Date() - new Date(profile.date_of_birth)) / (365.25 * 24 * 60 * 60 * 1000)) : 'Unknown')}
+Sex: ${profile?.sex || 'Unknown'}
+Height: ${profile?.height ? `${profile.height}${profile?.height_unit || 'cm'}` : 'Unknown'}
+Weight: ${profile?.weight ? `${profile.weight}${profile?.weight_unit || 'kg'}` : 'Unknown'}
+Conditions: ${profile?.conditions?.length > 0 ? profile.conditions.join(', ') : 'None'}
+Medications: ${profile?.medications?.length > 0 ? profile.medications.join(', ') : 'None'}
+Allergies: ${profile?.allergies || 'None'}
+Pregnant: ${profile?.is_pregnant ? 'Yes' : 'No'}
+Family history: ${profile?.family_history?.length > 0 ? profile.family_history.join(', ') : 'None'}
+Language: ${profile?.language || 'English'}
+Past reports: ${pastReports?.length > 0 ? pastReports.map(r => `${r.title}(${r.overall_score}/10,${r.created_at?.split('T')[0]})`).join(' | ') : 'First report'}
 
-Name: ${profile?.full_name || 'Not provided'}
-Age: ${profile?.age || (profile?.date_of_birth ? 
-  Math.floor((new Date() - new Date(profile.date_of_birth)) / 
-  (365.25 * 24 * 60 * 60 * 1000)) : 'Unknown')} years
-Biological Sex: ${profile?.sex || 'Not provided'}
-Height: ${profile?.height ? 
-  `${profile.height} ${profile.height_unit || 'cm'}` : 
-  'Not provided'}
-Weight: ${profile?.weight ? 
-  `${profile.weight} ${profile.weight_unit || 'kg'}` : 
-  'Not provided'}
-Ethnicity: ${profile?.ethnicity || 'Not provided'}
-Existing conditions: ${
-  profile?.conditions?.length > 0 
-    ? profile.conditions.join(', ') 
-    : 'None reported'
-}
-Current medications: ${
-  profile?.medications?.length > 0 
-    ? profile.medications.join(', ') 
-    : 'None reported'
-}
-Allergies: ${profile?.allergies || 'None reported'}
-Pregnancy status: ${profile?.is_pregnant ? 'Currently pregnant' : 'Not pregnant'}
-Family history: ${
-  profile?.family_history?.length > 0 
-    ? profile.family_history.join(', ') 
-    : 'Not provided'
-}
-Health goals: ${
-  profile?.track_goals?.length > 0 
-    ? profile.track_goals.join(', ') 
-    : 'Not provided'
-}
-Preferred language: ${profile?.language || 'English'}
+Instructions:
+1. Adjust all reference ranges for this patient's age and sex
+2. If medications affect markers note it in explanation
+3. Compare with past reports for trend field
+4. Respond in ${profile?.language || 'English'}
+5. For habits use Indian food references where relevant
 
-=== PAST REPORTS CONTEXT ===
-${pastReports?.length > 0 
-  ? `This patient has ${pastReports.length} previous report(s):
-${pastReports.map(r => 
-  `- ${r.title} | Score: ${r.overall_score}/10 | Status: ${r.health_status} | Date: ${r.created_at?.split('T')[0]}`
-).join('\n')}
-Compare current results with past reports and 
-note any worsening or improving trends per marker.`
-  : 'This is the patient\'s first report. No historical data available for trend comparison.'
-}
-
-=== ANALYSIS INSTRUCTIONS ===
-1. Adjust ALL reference ranges based on the 
-   patient's age, sex, and existing conditions above.
-2. If the patient is on medications that affect 
-   markers (e.g. statins affect liver enzymes, 
-   metformin affects B12), note this in the 
-   explanation field for those markers.
-3. If pregnant, use pregnancy-specific reference ranges.
-4. Give habit recommendations relevant to Indian 
-   lifestyle — mention dal, roti, seasonal vegetables, 
-   morning walks rather than only Western food references.
-5. Respond in ${profile?.language || 'English'}.
-6. Compare with past reports if available and 
-   set trend field accordingly for each marker.
-
-Now analyze the attached medical report:
-`
+Analyze the medical report image now:`
 
         // ── STEP 7: Call Gemini Vision API ──
-        const result = await reportModel.generateContent([
-          { text: SYSTEM_PROMPT },
-          { text: userContext },
-          {
-            inlineData: {
-              mimeType: mimeType,
-              data: base64Data
+        console.log('=== TOKEN USAGE ESTIMATE ===')
+        console.log('System prompt chars:', SYSTEM_PROMPT.length)
+        console.log('User context chars:', userContext.length)
+        console.log('Image base64 chars:', base64Data.length)
+        console.log('Estimated total tokens:', Math.round(
+          (SYSTEM_PROMPT.length + userContext.length + base64Data.length) / 4
+        ))
+        console.log('============================')
+
+        // ── STEP 7: Call Gemini Vision API ──
+        const result = await withRetry(() => 
+          reportModel.generateContent([
+            { text: SYSTEM_PROMPT },
+            { text: userContext },
+            {
+              inlineData: {
+                mimeType: finalMimeType,
+                data: base64Data
+              }
             }
-          }
-        ])
+          ])
+        )
 
         const rawResponse = result.response.text()
 
@@ -338,9 +328,7 @@ Now analyze the attached medical report:
         }
     } finally {
         // Always clean up temp file
-        if (tempFilePath && fs.existsSync(tempFilePath)) {
-            fs.unlinkSync(tempFilePath)
-        }
+        cleanupFile(tempFilePath)
     }
 })
 
