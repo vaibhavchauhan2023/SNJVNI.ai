@@ -32,8 +32,8 @@ router.post('/', requireAuth, async (req, res) => {
     const userId = req.user.id
 
     if (!message || !reportId) {
-      return res.status(400).json({ 
-        error: 'message and reportId are required' 
+      return res.status(400).json({
+        error: 'message and reportId are required'
       })
     }
 
@@ -75,10 +75,10 @@ Conditions: ${profile?.conditions?.join(', ') || 'None'}
 Medications: ${profile?.medications?.join(', ') || 'None'}
 
 === BIOMARKER RESULTS ===
-${biomarkers?.map(b => 
-  `${b.name} (${b.plain_name}): ${b.value} ${b.unit} | Range: ${b.reference_range} | Status: ${b.status?.toUpperCase()} | Risk: ${b.risk_score}/10
+${biomarkers?.map(b =>
+      `${b.name} (${b.plain_name}): ${b.value} ${b.unit} | Range: ${b.reference_range} | Status: ${b.status?.toUpperCase()} | Risk: ${b.risk_score}/10
   Explanation: ${b.explanation}`
-).join('\n\n') || 'No biomarker data available'}
+    ).join('\n\n') || 'No biomarker data available'}
 
 Answer the patient's question based on their 
 specific report data above.
@@ -91,19 +91,23 @@ specific report data above.
       parts: [{ text: msg.content }]
     }))
 
-    // Create chat session with history
-    const model = ai.getGenerativeModel({ 
-      model: 'gemini-2.5-flash',
-      systemInstruction: ION_SYSTEM_PROMPT + '\n\n' + reportContext
+    const contents = [
+      ...conversationHistory,
+      {
+        role: 'user',
+        parts: [{ text: message }]
+      }
+    ]
+
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: contents,
+      config: {
+        systemInstruction: ION_SYSTEM_PROMPT + '\n\n' + reportContext
+      }
     })
 
-    const chat = model.startChat({
-      history: conversationHistory
-    })
-
-    // Send the new message
-    const result = await chat.sendMessage(message)
-    const reply = result.response.text()
+    const reply = result.text
 
     console.log(`[ION] Reply generated successfully`)
 
@@ -124,7 +128,7 @@ specific report data above.
     if (existingConvo) {
       await supabase
         .from('ion_conversations')
-        .update({ 
+        .update({
           messages: updatedMessages,
           updated_at: new Date().toISOString()
         })
@@ -143,8 +147,8 @@ specific report data above.
 
   } catch (error) {
     console.error('ION chat error:', error)
-    res.status(500).json({ 
-      error: 'ION failed to respond. Please try again.' 
+    res.status(500).json({
+      error: 'ION failed to respond. Please try again.'
     })
   }
 })
