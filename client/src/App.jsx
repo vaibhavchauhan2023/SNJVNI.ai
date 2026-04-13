@@ -464,16 +464,6 @@ function AppContent() {
           <ProtectedRoute><Profile /></ProtectedRoute>
         } />
 
-        <Route path="/trends" element={
-          <ProtectedRoute>
-            <NotFoundPage 
-              onPrimaryClick={() => navigate('/dashboard')} 
-              onSecondaryClick={() => navigate('/')} 
-              variant="generic"
-            />
-          </ProtectedRoute>
-        } />
-
         <Route path="*" element={
           <NotFoundPage 
             onPrimaryClick={() => navigate('/dashboard')} 
