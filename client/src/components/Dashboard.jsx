@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { supabase } from '../lib/supabase.js';
-import { 
-  UploadCloud, FileText, MessageCircle, Download, AlertTriangle, 
-  TrendingUp, TrendingDown, Minus, Leaf, Lightbulb, Calendar, 
+import {
+  UploadCloud, FileText, MessageCircle, Download, AlertTriangle,
+  TrendingUp, TrendingDown, Minus, Leaf, Lightbulb, Calendar,
   Send, X, Flame, FileHeart
 } from 'lucide-react';
 
@@ -79,17 +79,17 @@ const Dashboard = () => {
       try {
         setLoading(true)
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        
+
         if (sessionError) {
           console.error('Session error:', sessionError)
           return
         }
-        
+
         if (!session || !session.user) {
           console.log('No session yet — waiting for auth')
           return
         }
-        
+
         const userId = session.user.id
         console.log('Dashboard loading for user:', userId)
 
@@ -98,10 +98,10 @@ const Dashboard = () => {
             'Authorization': `Bearer ${session.access_token}`
           }
         })
-        
+
         if (res.ok) {
-           const dbData = await res.json()
-           setData(dbData)
+          const dbData = await res.json()
+          setData(dbData)
         }
       } catch (err) {
         console.error('Dashboard fetch error:', err)
@@ -121,7 +121,7 @@ const Dashboard = () => {
   };
 
   const getStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'normal': return '#0F6E56';
       case 'needs_attention': return '#D97706';
       case 'critical': return '#DC2626';
@@ -130,7 +130,7 @@ const Dashboard = () => {
   };
 
   const getStatusText = (status) => {
-    switch(status) {
+    switch (status) {
       case 'normal': return 'All good';
       case 'needs_attention': return 'Needs attention';
       case 'critical': return 'Critical — see doctor';
@@ -139,7 +139,7 @@ const Dashboard = () => {
   };
 
   const getStatusBg = (status) => {
-    switch(status) {
+    switch (status) {
       case 'normal': return 'bg-[#F0FDFA] border-[#CCFBF1] text-[#0F6E56]';
       case 'needs_attention': return 'bg-[#FFFBEB] border-[#FDE68A] text-[#D97706]';
       case 'critical': return 'bg-[#FEF2F2] border-[#FECACA] text-[#DC2626]';
@@ -175,9 +175,9 @@ const Dashboard = () => {
     // POST /api/ion/chat
     setTimeout(() => {
       setIsTyping(false);
-      setMessages(prev => [...prev, { 
-        role: 'ion', 
-        content: `I can see your markers might be elevated. This is often associated with recent lifestyle changes. [Connect to AI API to get real insights]` 
+      setMessages(prev => [...prev, {
+        role: 'ion',
+        content: `I can see your markers might be elevated. This is often associated with recent lifestyle changes. [Connect to AI API to get real insights]`
       }]);
     }, 1200);
   };
@@ -185,7 +185,7 @@ const Dashboard = () => {
   if (authLoading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <style dangerouslySetInnerHTML={{__html: `@keyframes spin { to { transform: rotate(360deg) } }`}} />
+        <style dangerouslySetInnerHTML={{ __html: `@keyframes spin { to { transform: rotate(360deg) } }` }} />
         <div style={{ width: 32, height: 32, border: '3px solid #E2E8F0', borderTop: '3px solid #0D9488', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
       </div>
     )
@@ -193,7 +193,8 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#FFFFFF] pb-20 font-body overflow-x-hidden">
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @media (prefers-reduced-motion: no-preference) {
           .fade-in { animation: fadeIn 0.3s ease-out forwards; }
           .fade-up { animation: fadeUp 0.35s ease-out forwards; opacity: 0; }
@@ -221,7 +222,7 @@ const Dashboard = () => {
               <div className="w-[140px] h-[72px] rounded-[36px] shimmer"></div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-10">
-              {[1,2,3,4].map(i => <div key={i} className="h-[140px] rounded-[14px] shimmer"></div>)}
+              {[1, 2, 3, 4].map(i => <div key={i} className="h-[140px] rounded-[14px] shimmer"></div>)}
             </div>
           </div>
         ) : (
@@ -250,7 +251,7 @@ const Dashboard = () => {
                   <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
                     <div className="flex items-center gap-4">
                       {/* Score Circle */}
-                      <div 
+                      <div
                         className="w-[72px] h-[72px] rounded-full border-[3px] flex flex-col items-center justify-center shrink-0"
                         style={{ borderColor: getStatusColor(data.latestReport.status) }}
                       >
@@ -259,7 +260,7 @@ const Dashboard = () => {
                         </span>
                         <span className="text-[10px] text-[#94A3B8] leading-none mt-0.5">/10</span>
                       </div>
-                      
+
                       {/* Status Block */}
                       <div className="flex flex-col items-start gap-1">
                         <div className={`px-3 py-1 text-[12px] font-semibold rounded-[20px] border ${getStatusBg(data.latestReport.status)}`}>
@@ -305,7 +306,7 @@ const Dashboard = () => {
             {/* --- SECTION 2: QUICK ACTIONS --- */}
             <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 w-full">
               {/* Upload Card */}
-              <div 
+              <div
                 onClick={() => navigate('/analyze')}
                 className="bg-[#F0FDFA] border-[1.5px] border-[#0D9488] rounded-[14px] p-5 cursor-pointer transition-all duration-200 hover:shadow-[0_4px_12px_rgba(13,148,136,0.08)] hover:-translate-y-[1px] flex flex-col fade-up"
                 style={{ animationDelay: '0.06s' }}
@@ -319,7 +320,7 @@ const Dashboard = () => {
               </div>
 
               {/* My Reports */}
-              <div 
+              <div
                 onClick={() => navigate('/history')}
                 className="bg-white border border-[#E2E8F0] rounded-[14px] p-5 cursor-pointer transition-all duration-200 hover:border-[#0D9488] hover:shadow-[0_4px_12px_rgba(13,148,136,0.08)] hover:-translate-y-[1px] flex flex-col fade-up"
                 style={{ animationDelay: '0.12s' }}
@@ -332,7 +333,7 @@ const Dashboard = () => {
               </div>
 
               {/* Ask ION */}
-              <div 
+              <div
                 onClick={() => setIsChatOpen(true)}
                 className="bg-white border border-[#E2E8F0] rounded-[14px] p-5 cursor-pointer transition-all duration-200 hover:border-[#0D9488] hover:shadow-[0_4px_12px_rgba(13,148,136,0.08)] hover:-translate-y-[1px] flex flex-col fade-up"
                 style={{ animationDelay: '0.18s' }}
@@ -346,7 +347,7 @@ const Dashboard = () => {
               </div>
 
               {/* Doctor Export */}
-              <div 
+              <div
                 onClick={() => data.hasReports && navigate('/export')}
                 title={!data.hasReports ? "Upload a report first" : undefined}
                 className={`bg-white border border-[#E2E8F0] rounded-[14px] p-5 flex flex-col fade-up 
@@ -380,7 +381,7 @@ const Dashboard = () => {
                       {data.flaggedMarkers.slice(0, 3).map((marker, idx) => {
                         const statusColor = marker.status === 'low' || marker.status === 'high' ? '#D97706' : marker.status === 'critical' ? '#DC2626' : '#0F6E56';
                         return (
-                          <div 
+                          <div
                             key={marker.id}
                             onClick={() => navigate(`/report/${marker.reportId}#${marker.id}`)}
                             className="bg-white border border-[#E2E8F0] rounded-[14px] p-[18px] cursor-pointer hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all fade-up will-change-transform"
@@ -443,7 +444,7 @@ const Dashboard = () => {
                         if (insight.type === 'test_reminder') { Icon = Calendar; iconBg = '#EFF6FF'; iconColor = '#2563EB'; }
 
                         return (
-                          <div 
+                          <div
                             key={insight.id}
                             className="bg-white border border-[#E2E8F0] rounded-[14px] p-[18px] sm:px-[20px] flex gap-[14px] items-start fade-up"
                             style={{ animationDelay: `${0.5 + (idx * 0.08)}s` }}
@@ -454,13 +455,13 @@ const Dashboard = () => {
                             <div className="flex flex-col">
                               <h3 className="text-[13px] font-semibold text-[#0F172A]">{insight.title}</h3>
                               <p className="text-[12px] text-[#475569] leading-[1.6] mt-1 pr-2">{insight.body}</p>
-                              
+
                               {insight.relatedMarker && (
                                 <div className="mt-2 w-fit bg-[#F0FDFA] text-[#0F6E56] border border-[#CCFBF1] rounded-[4px] px-2 py-0.5 text-[10px] font-semibold uppercase">
                                   {insight.relatedMarker}
                                 </div>
                               )}
-                              
+
                               {insight.actionLabel && insight.actionRoute && (
                                 <span onClick={() => navigate(insight.actionRoute)} className="mt-2.5 text-[12px] text-[#0D9488] font-medium hover:underline cursor-pointer w-fit">
                                   {insight.actionLabel} →
@@ -488,7 +489,7 @@ const Dashboard = () => {
                 <p className="text-[14px] text-[#6B7280] max-w-[400px] mt-3 leading-[1.7]">
                   Upload your first medical report to get plain-English insights, risk scores, and personalized health recommendations.
                 </p>
-                <button 
+                <button
                   onClick={() => navigate('/analyze')}
                   className="mt-7 bg-[#0F6E56] text-white rounded-[10px] px-7 py-3 text-[15px] font-semibold hover:bg-[#085041] hover:-translate-y-[1px] transition-all shadow-[0_6px_16px_rgba(15,110,86,0.25)] flex items-center gap-2"
                 >
@@ -504,7 +505,7 @@ const Dashboard = () => {
       </div>
 
       {/* --- ION CHAT PANEL --- */}
-      <div 
+      <div
         className={`fixed top-[64px] right-0 md:w-[380px] w-full h-[calc(100vh-64px)] bg-white border-l border-[#E2E8F0] shadow-[-4px_0_24px_rgba(0,0,0,0.08)] z-40 flex flex-col transition-transform duration-300 ${isChatOpen ? 'translate-x-0 md:translate-y-0 translate-y-0' : 'translate-x-full md:translate-y-0 translate-y-[100%]'}`}
       >
         {/* Header */}
@@ -561,12 +562,12 @@ const Dashboard = () => {
             rows={1}
             value={chatInput}
             onChange={e => { setChatInput(e.target.value); autoResizeTextarea(); }}
-            onKeyDown={e => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); handleSendChat(chatInput); } }}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendChat(chatInput); } }}
             placeholder="Ask ION about your results..."
             className="flex-1 min-h-[40px] max-h-[120px] bg-white border border-[#E2E8F0] rounded-[10px] px-3 py-2.5 text-[13px] text-[#0F172A] resize-none outline-none focus:border-[#0D9488] focus:ring-[3px] focus:ring-[#0D9488]/10 hide-scrollbar"
           />
-          <button 
-            disabled={!chatInput.trim()} 
+          <button
+            disabled={!chatInput.trim()}
             onClick={() => handleSendChat(chatInput)}
             className={`w-[40px] h-[40px] rounded-[10px] flex items-center justify-center shrink-0 transition-colors ${chatInput.trim() ? 'bg-[#0F6E56] text-white hover:bg-[#085041]' : 'bg-[#E2E8F0] text-[#94A3B8]'}`}
           >

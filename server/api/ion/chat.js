@@ -11,14 +11,16 @@ const withRetry = async (fn, retries = 3) => {
     try {
       return await fn()
     } catch (err) {
-      const is429 = err.status === 429 || 
-                    err.message?.includes('429') ||
+      const isRetryable = err.status === 429 || err.status === 503 ||
+                    err.message?.includes('429') || err.message?.includes('503') ||
                     err.message?.includes('RESOURCE_EXHAUSTED') ||
-                    err.message?.includes('quota')
+                    err.message?.includes('quota') ||
+                    err.message?.includes('high demand') ||
+                    err.message?.includes('UNAVAILABLE')
       
-      if (is429 && attempt < retries) {
+      if (isRetryable && attempt < retries) {
         const waitMs = attempt * 10000
-        console.log(`Rate limited (attempt ${attempt}/${retries}). Waiting ${waitMs/1000}s...`)
+        console.log(`API busy/Rate limited (attempt ${attempt}/${retries}). Waiting ${waitMs/1000}s...`)
         await new Promise(resolve => setTimeout(resolve, waitMs))
         continue
       }
