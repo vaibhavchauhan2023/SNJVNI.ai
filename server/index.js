@@ -4,6 +4,7 @@ import cors from 'cors';
 import { GoogleGenAI } from '@google/genai';
 import uploadRoutes from './api/reports/upload.js';
 import getReportRouter from './api/reports/[id].js';
+import reportsIndexRouter from './api/reports/index.js';
 import ionRoutes from './api/ion/chat.js';
 import dashboardRoutes from './api/dashboard/index.js';
 
@@ -37,6 +38,7 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/api/reports/upload', uploadRoutes);
 app.use('/api/reports', getReportRouter);
+app.use('/api/reports', reportsIndexRouter);
 app.use('/api/ion/chat', ionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 

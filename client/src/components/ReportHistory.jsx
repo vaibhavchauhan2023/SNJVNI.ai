@@ -1,73 +1,24 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase.js';
 import { 
   Filter, Calendar, TrendingUp, TrendingDown, Minus, 
   Search, ChevronDown, FileText, CheckSquare, Square, 
   BarChart2, Flame, ArrowUpDown, UploadCloud, X
 } from 'lucide-react';
 
-// TODO: Replace with API call
-const mockReports = [
-  {
-    id: "rep_001",
-    date: "Mar 19, 2026",
-    dateISO: "2026-03-19",
-    type: "Blood Panel + Thyroid",
-    overallScore: 6.4,
-    status: "needs_attention",
-    flaggedCount: 3,
-    totalMarkers: 34,
-    topFlagged: [
-      { name: "TSH", status: "high" },
-      { name: "Vitamin D", status: "critical" }
-    ]
-  },
-  {
-    id: "rep_002",
-    date: "Dec 4, 2025",
-    dateISO: "2025-12-04",
-    type: "Lipid Profile",
-    overallScore: 4.1,
-    status: "needs_attention",
-    flaggedCount: 2,
-    totalMarkers: 12,
-    topFlagged: [
-      { name: "LDL", status: "high" },
-      { name: "Triglycerides", status: "high" }
-    ]
-  },
-  {
-    id: "rep_003",
-    date: "Aug 22, 2025",
-    dateISO: "2025-08-22",
-    type: "Complete Blood Count",
-    overallScore: 2.1,
-    status: "normal",
-    flaggedCount: 0,
-    totalMarkers: 18,
-    topFlagged: []
-  },
-  {
-    id: "rep_004",
-    date: "Feb 10, 2025",
-    dateISO: "2025-02-10",
-    type: "Urine Analysis",
-    overallScore: 7.8,
-    status: "critical",
-    flaggedCount: 5,
-    totalMarkers: 22,
-    topFlagged: [
-      { name: "Protein", status: "critical" },
-      { name: "WBC", status: "high" }
-    ]
-  }
-];
-
 export default function ReportHistory() {
   const navigate = useNavigate();
   
-  const [isLoading, setIsLoading] = useState(true);
   const [reports, setReports] = useState([]);
+  const [summary, setSummary] = useState({
+    totalReports: 0,
+    mostFlagged: null,
+    healthTrend: null,
+    longestStreak: null
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   
   // Controls state
   const [filterType, setFilterType] = useState("All types");
@@ -82,98 +33,87 @@ export default function ReportHistory() {
   const [maxSelectWarning, setMaxSelectWarning] = useState(false);
 
   useEffect(() => {
-    // Simulate API load
-    const timer = setTimeout(() => {
-      setReports(mockReports);
-      setIsLoading(false);
-    }, 600);
-    return () => clearTimeout(timer);
+    fetchReports();
   }, []);
 
-  // Compute Summary Stats
-  const stats = useMemo(() => {
-    if (reports.length === 0) return null;
-    
-    // Sort chronologically (oldest to newest) for trends
-    const chronological = [...reports].sort((a, b) => new Date(a.dateISO) - new Date(b.dateISO));
-    
-    // Total
-    const total = reports.length;
-    
-    // Longest streak (reports within 3 months / ~90 days)
-    let maxStreak = 1;
-    let currentStreak = 1;
-    for (let i = 1; i < chronological.length; i++) {
-      const diffTime = Math.abs(new Date(chronological[i].dateISO) - new Date(chronological[i-1].dateISO));
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      if (diffDays <= 90) {
-        currentStreak++;
-      } else {
-        currentStreak = 1;
+  const fetchReports = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        setError('Not logged in');
+        return;
       }
-      maxStreak = Math.max(maxStreak, currentStreak);
+
+      console.log('Fetching reports from backend...');
+
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/reports`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to fetch reports');
+      }
+
+      const data = await res.json();
+      console.log('Reports received:', data);
+
+      setReports(data.reports || []);
+      setSummary(data.summary || {});
+
+    } catch (err) {
+      console.error('Fetch reports error:', err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
-
-    // Most frequently flagged
-    const markerCounts = {};
-    reports.forEach(r => {
-      r.topFlagged.forEach(f => {
-        markerCounts[f.name] = (markerCounts[f.name] || 0) + 1;
-      });
-    });
-    const mostFrequent = Object.entries(markerCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "None";
-
-    // Overall trend (assuming lower score is better/normal based on mock data)
-    const earliestScore = chronological[0].overallScore;
-    const latestScore = chronological[chronological.length - 1].overallScore;
-    const trendIsImproving = latestScore < earliestScore;
-
-    return {
-      total,
-      streak: maxStreak > 1 ? `${maxStreak} in a row` : "No streak yet",
-      frequentMarker: mostFrequent,
-      trendIsImproving
-    };
-  }, [reports]);
+  };
 
   // Filter & Sort Logic
   const filteredAndSorted = useMemo(() => {
-    let result = [...reports];
-
-    // Filter by type
-    if (filterType !== "All types") {
-      result = result.filter(r => r.type.includes(filterType));
-    }
-
-    // Filter by date range
-    const now = new Date();
-    if (dateRange === "Last 3 months") {
-      const threeMonthsAgo = new Date();
-      threeMonthsAgo.setMonth(now.getMonth() - 3);
-      result = result.filter(r => new Date(r.dateISO) >= threeMonthsAgo);
-    } else if (dateRange === "Last 1 year") {
-      const oneYearAgo = new Date();
-      oneYearAgo.setFullYear(now.getFullYear() - 1);
-      result = result.filter(r => new Date(r.dateISO) >= oneYearAgo);
-    }
-
-    // Search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(r => 
-        r.type.toLowerCase().includes(q) || 
-        r.topFlagged.some(f => f.name.toLowerCase().includes(q))
-      );
-    }
-
-    // Sort
-    result.sort((a, b) => {
-      const dateA = new Date(a.dateISO);
-      const dateB = new Date(b.dateISO);
-      return sortOrder === "Newest first" ? dateB - dateA : dateA - dateB;
-    });
-
-    return result;
+    return reports
+      .filter(r => {
+        if (filterType !== 'All types' && 
+            !r.type?.toLowerCase().includes(filterType.toLowerCase())) 
+          return false
+        
+        if (dateRange === 'Last 3 months') {
+          const threeMonthsAgo = new Date()
+          threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+          return new Date(r.created_at) >= threeMonthsAgo
+        }
+        if (dateRange === 'Last 1 year') {
+          const oneYearAgo = new Date()
+          oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
+          return new Date(r.created_at) >= oneYearAgo
+        }
+        return true
+      })
+      .filter(r => {
+        if (!searchQuery) return true
+        return r.flaggedMarkers?.some(m => 
+          m.name.toLowerCase().includes(searchQuery.toLowerCase())
+        ) || r.title?.toLowerCase().includes(
+          searchQuery.toLowerCase()
+        )
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.created_at)
+        const dateB = new Date(b.created_at)
+        return sortOrder === 'Newest first' 
+          ? dateB - dateA 
+          : dateA - dateB
+      });
   }, [reports, filterType, dateRange, sortOrder, searchQuery]);
 
   // Handlers
@@ -238,40 +178,45 @@ export default function ReportHistory() {
           <h1 className="text-[22px] font-bold text-[#0F172A]">Report History</h1>
           <p className="text-[13px] text-[#94A3B8] mt-1">All past reports · Filter · Compare · Track over time</p>
         </div>
-        <button className="mt-4 md:mt-0 flex items-center gap-2 bg-[#0F6E56] text-white rounded-[10px] px-5 py-2.5 text-[14px] font-semibold hover:bg-[#085041] hover:-translate-y-[1px] transition-all">
+        <button onClick={() => navigate('/analyze')} className="mt-4 md:mt-0 flex items-center gap-2 bg-[#0F6E56] text-white rounded-[10px] px-5 py-2.5 text-[14px] font-semibold hover:bg-[#085041] hover:-translate-y-[1px] transition-all">
           <UploadCloud size={18} />
           Upload new report
         </button>
       </header>
 
       {/* 2. Summary Strip */}
-      {stats && !isLoading && (
+      {!isLoading && !error && reports.length > 0 && (
         <div className="bg-[#F0FDFA] rounded-[14px] p-4 flex flex-col md:flex-row gap-6 mb-8 fade-up border border-[#CCFBF1]">
           <div className="flex-1 border-b md:border-b-0 md:border-r border-[#CCFBF1] pb-4 md:pb-0">
             <p className="text-[11px] text-[#94A3B8] uppercase tracking-wider mb-1">Total Reports</p>
-            <p className="text-[18px] font-bold text-[#0D9488]">{stats.total}</p>
+            <p className="text-[18px] font-bold text-[#0D9488]">{summary.totalReports}</p>
           </div>
           <div className="flex-1 border-b md:border-b-0 md:border-r border-[#CCFBF1] pb-4 md:pb-0">
             <p className="text-[11px] text-[#94A3B8] uppercase tracking-wider mb-1">Longest Streak</p>
             <p className="text-[18px] font-bold text-[#0F172A] flex items-center gap-2">
               <Flame size={16} className="text-[#D97706]" />
-              {stats.streak}
+              No streak yet
             </p>
           </div>
           <div className="flex-1 border-b md:border-b-0 md:border-r border-[#CCFBF1] pb-4 md:pb-0">
             <p className="text-[11px] text-[#94A3B8] uppercase tracking-wider mb-1">Most Flagged</p>
-            <p className="text-[18px] font-bold text-[#0F172A]">{stats.frequentMarker}</p>
+            <p className="text-[18px] font-bold text-[#0F172A]">{summary.mostFlagged || 'None yet'}</p>
           </div>
           <div className="flex-1 flex items-center">
-            {stats.trendIsImproving ? (
+            {summary.healthTrend === 'improving' ? (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-[#F0FDFA] border border-[#CCFBF1] rounded-[20px]">
                 <TrendingUp size={16} className="text-[#16A34A]" />
                 <span className="text-[13px] font-semibold text-[#16A34A]">Health is improving</span>
               </div>
+            ) : summary.healthTrend === 'worsening' ? (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FEF2F2] border border-[#FECACA] rounded-[20px]">
+                <TrendingDown size={16} className="text-[#DC2626]" />
+                <span className="text-[13px] font-semibold text-[#DC2626]">Needs attention</span>
+              </div>
             ) : (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-[20px]">
-                <TrendingDown size={16} className="text-[#D97706]" />
-                <span className="text-[13px] font-semibold text-[#D97706]">Attention needed</span>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#F8FFFE] border border-[#E2E8F0] rounded-[20px]">
+                <Minus size={16} className="text-[#94A3B8]" />
+                <span className="text-[13px] font-semibold text-[#94A3B8]">Stable</span>
               </div>
             )}
           </div>
@@ -389,35 +334,35 @@ export default function ReportHistory() {
             {selectedIds.map(id => {
               const rep = reports.find(r => r.id === id);
               if (!rep) return null;
-              const statusColors = getStatusColors(rep.status);
+              const statusColors = getStatusColors(rep.health_status || rep.status);
               
               return (
                 <div key={`compare-${rep.id}`} className="flex flex-col">
                   <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3 mb-4">
                     <div>
-                      <p className="text-[12px] text-[#94A3B8]">{rep.date}</p>
-                      <h3 className="text-[16px] font-semibold text-[#0F172A]">{rep.type}</h3>
+                      <p className="text-[12px] text-[#94A3B8]">{new Date(rep.report_date || rep.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                      <h3 className="text-[16px] font-semibold text-[#0F172A]">{rep.title}</h3>
                     </div>
                     <div className={`px-3 py-1 text-[12px] font-semibold rounded-[20px] ${statusColors.bg} ${statusColors.text} ${statusColors.border} border`}>
-                      {getStatusLabel(rep.status)}
+                      {getStatusLabel(rep.health_status)}
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-4 mb-6">
                     <div className={`w-16 h-16 rounded-full border-[3px] flex items-center justify-center text-[20px] font-bold ${statusColors.border} ${statusColors.text}`}>
-                      {rep.overallScore}
+                      {rep.overall_score?.toFixed(1)}
                     </div>
                     <div>
                       <p className="text-[13px] text-[#475569] font-medium">Overall Score</p>
-                      <p className="text-[12px] text-[#94A3B8] mt-1">{rep.flaggedCount} markers flagged out of {rep.totalMarkers}</p>
+                      <p className="text-[12px] text-[#94A3B8] mt-1">{rep.flagged_count} markers flagged out of {rep.total_markers}</p>
                     </div>
                   </div>
 
                   <div>
                     <p className="text-[13px] font-semibold text-[#0F172A] mb-3 border-b border-[#E2E8F0] pb-2">Flagged Markers</p>
-                    {rep.topFlagged.length > 0 ? (
+                    {rep.flaggedMarkers?.length > 0 ? (
                       <ul className="space-y-2">
-                        {rep.topFlagged.map((flag, idx) => {
+                        {rep.flaggedMarkers.map((flag, idx) => {
                            const flagColors = getStatusColors(flag.status);
                            return (
                              <li key={idx} className="flex justify-between items-center bg-[#F8FFFE] p-2 rounded-[8px] border border-[#E2E8F0]">
@@ -449,17 +394,36 @@ export default function ReportHistory() {
             Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="bg-white border border-[#E2E8F0] rounded-[14px] p-5 h-[160px] shimmer fade-in" style={{ animationDelay: `${i * 0.06}s` }}></div>
             ))
+          ) : error ? (
+            <div className="col-span-full py-12 text-center fade-in">
+              <div className="w-[80px] h-[80px] rounded-full bg-[#FEF2F2] flex items-center justify-center mx-auto mb-6">
+                <FileText size={36} className="text-[#DC2626]" />
+              </div>
+              <p className="text-[16px] font-semibold text-[#0F172A] mb-2">{error}</p>
+              <button 
+                onClick={fetchReports}
+                className="bg-[#DC2626] text-white rounded-[10px] px-6 py-2.5 text-[14px] font-semibold hover:bg-[#B91C1C] transition-all"
+              >
+                Try again
+              </button>
+            </div>
           ) : filteredAndSorted.length === 0 ? (
             // Empty state
             <div className="col-span-full py-12 text-center fade-in">
               <FileText size={48} className="mx-auto text-[#E2E8F0] mb-4" />
-              <p className="text-[16px] font-semibold text-[#0F172A]">No reports found</p>
-              <p className="text-[13px] text-[#94A3B8] mt-1">Try adjusting your filters or search query.</p>
+              <p className="text-[16px] font-semibold text-[#0F172A]">No reports yet</p>
+              <p className="text-[13px] text-[#94A3B8] mt-1 mb-6">Upload your first report to see your health history here.</p>
+              <button 
+                onClick={() => navigate('/analyze')}
+                className="bg-[#0F6E56] text-white rounded-[10px] px-6 py-2.5 text-[14px] font-semibold hover:bg-[#085041] transition-all inline-block"
+              >
+                Upload report
+              </button>
             </div>
           ) : (
             // Render Items
             filteredAndSorted.map((report, index) => {
-              const statusColors = getStatusColors(report.status);
+              const statusColors = getStatusColors(report.health_status || report.status);
               const isSelected = selectedIds.includes(report.id);
               const delay = `${index * 0.06}s`;
 
@@ -471,8 +435,8 @@ export default function ReportHistory() {
                     
                     {/* Date label (mobile left side, desktop floating) */}
                     <div className="absolute -left-[110px] top-3.5 hidden md:block w-20 text-right">
-                       <p className="text-[12px] font-medium text-[#94A3B8]">{report.date.split(',')[0]}</p>
-                       <p className="text-[10px] text-[#94A3B8]">{report.date.split(',')[1]}</p>
+                       <p className="text-[12px] font-medium text-[#94A3B8]">{new Date(report.report_date || report.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
+                       <p className="text-[10px] text-[#94A3B8]">{new Date(report.report_date || report.created_at).getFullYear()}</p>
                     </div>
 
                     <div 
@@ -488,22 +452,22 @@ export default function ReportHistory() {
                             >
                               {isSelected ? <CheckSquare size={18} className="text-[#0D9488]" /> : <Square size={18} />}
                             </div>
-                           <h3 className="text-[14px] font-semibold text-[#0F172A]">{report.type}</h3>
+                           <h3 className="text-[14px] font-semibold text-[#0F172A]">{report.title}</h3>
                         </div>
-                        <p className="text-[12px] text-[#94A3B8] md:hidden">{report.date}</p>
+                        <p className="text-[12px] text-[#94A3B8] md:hidden">{new Date(report.report_date || report.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                       </div>
                       
                       <div className="flex items-center gap-4">
                         <div className={`w-10 h-10 rounded-full border-[2px] flex items-center justify-center text-[13px] font-bold ${statusColors.border} ${statusColors.text}`}>
-                          {report.overallScore}
+                          {report.overall_score?.toFixed(1)}
                         </div>
                         <div>
                           <div className={`inline-block px-2.5 py-0.5 rounded-[20px] text-[11px] font-semibold border ${statusColors.bg} ${statusColors.border} ${statusColors.text}`}>
-                            {getStatusLabel(report.status)}
+                            {getStatusLabel(report.health_status)}
                           </div>
-                          {report.topFlagged.length > 0 && (
+                          {report.flaggedMarkers?.length > 0 && (
                             <p className="text-[12px] text-[#94A3B8] mt-1">
-                              Flags: {report.topFlagged.map(f => f.name).join(', ')}
+                              Flags: {report.flaggedMarkers.map(f => f.name).join(', ')}
                             </p>
                           )}
                         </div>
@@ -530,28 +494,28 @@ export default function ReportHistory() {
                     >
                       {isSelected ? <CheckSquare size={18} className="text-[#0D9488]" /> : <Square size={18} />}
                     </div>
-                    <h3 className="text-[14px] font-semibold text-[#0F172A] line-clamp-1">{report.type}</h3>
-                    <span className="text-[12px] text-[#94A3B8] ml-auto shrink-0">{report.date}</span>
+                    <h3 className="text-[14px] font-semibold text-[#0F172A] line-clamp-1">{report.title}</h3>
+                    <span className="text-[12px] text-[#94A3B8] ml-auto shrink-0">{new Date(report.report_date || report.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                   </div>
 
                   {/* Middle row */}
                   <div className="flex items-center gap-4 mb-4">
                     <div className={`w-10 h-10 rounded-full border-[2px] flex items-center justify-center text-[13px] font-bold shrink-0 ${statusColors.border} ${statusColors.text}`}>
-                      {report.overallScore}
+                      {report.overall_score?.toFixed(1)}
                     </div>
                     <div>
                       <div className={`inline-block px-2.5 py-0.5 rounded-[20px] text-[11px] font-semibold mb-1 border ${statusColors.bg} ${statusColors.border} ${statusColors.text}`}>
-                        {getStatusLabel(report.status)}
+                        {getStatusLabel(report.health_status)}
                       </div>
                       <p className="text-[12px] text-[#94A3B8] leading-tight">
-                        {report.flaggedCount} markers flagged · {report.totalMarkers} total
+                        {report.flagged_count} markers flagged · {report.total_markers} total
                       </p>
                     </div>
                   </div>
 
                   {/* Flagged Chips */}
                   <div className="flex flex-wrap gap-2 mb-4 flex-1">
-                    {report.topFlagged.slice(0, 2).map((flag, idx) => {
+                    {report.flaggedMarkers?.slice(0, 2).map((flag, idx) => {
                       const flagColor = getStatusColors(flag.status);
                       return (
                         <div key={idx} className={`px-2 py-0.5 rounded-[6px] text-[10px] font-semibold uppercase border ${flagColor.bg} ${flagColor.text} ${flagColor.border}`}>
