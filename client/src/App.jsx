@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import {
   Menu, X, Lock, Info, UploadCloud, Cpu, FileText,
   HeartPulse, Activity, List, AlertTriangle, TrendingUp,
@@ -13,7 +13,8 @@ import Dashboard from './components/Dashboard';
 import ReportDashboard from './components/ReportDashboard';
 import ReportHistory from './components/ReportHistory';
 import ReportUpload from './components/ReportUpload';
-import ProtectedRoute from './components/ProtectedRoute'
+import ProtectedRoute from './components/ProtectedRoute';
+import NotFoundPage from './components/NotFoundPage';
 
 // --- ANIMATION WRAPPER ---
 const FadeIn = ({ children, delay = 0, className = '' }) => {
@@ -431,6 +432,7 @@ function SnjvniLandingPage() {
 
 function AppContent() {
   const location = useLocation();
+  const navigate = useNavigate();
   const hideHeader = ['/login', '/signup', '/onboarding'].includes(location.pathname) || location.pathname.startsWith('/report');
 
   return (
@@ -460,6 +462,23 @@ function AppContent() {
 
         <Route path="/my-profile" element={
           <ProtectedRoute><Profile /></ProtectedRoute>
+        } />
+
+        <Route path="/trends" element={
+          <ProtectedRoute>
+            <NotFoundPage 
+              onPrimaryClick={() => navigate('/dashboard')} 
+              onSecondaryClick={() => navigate('/')} 
+              variant="generic"
+            />
+          </ProtectedRoute>
+        } />
+
+        <Route path="*" element={
+          <NotFoundPage 
+            onPrimaryClick={() => navigate('/dashboard')} 
+            onSecondaryClick={() => navigate('/')} 
+          />
         } />
       </Routes>
     </>
