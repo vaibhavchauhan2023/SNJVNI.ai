@@ -126,7 +126,7 @@ router.post('/', requireAuth, upload.single('report'), async (req, res) => {
         // ── STEP 5: Convert file to base64 for Gemini ──
         const mimeType = getMimeType(file.originalname)
         const { base64, mimeType: finalMimeType } = await compressImageForGemini(tempFilePath, mimeType)
-        const base64Data = base6
+        const base64Data = base64
 
         // ── STEP 6: Build prompt with user context ──
         const userContext = `PATIENT CONTEXT:
