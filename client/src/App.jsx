@@ -15,6 +15,7 @@ import ReportHistory from './components/ReportHistory';
 import ReportUpload from './components/ReportUpload';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotFoundPage from './components/NotFoundPage';
+import TrendTrackerPage from './components/TrendTrackerPage';
 
 // --- ANIMATION WRAPPER ---
 const FadeIn = ({ children, delay = 0, className = '' }) => {
@@ -462,6 +463,10 @@ function AppContent() {
 
         <Route path="/my-profile" element={
           <ProtectedRoute><Profile /></ProtectedRoute>
+        } />
+
+        <Route path="/trends" element={
+          <ProtectedRoute><TrendTrackerPage /></ProtectedRoute>
         } />
 
         <Route path="*" element={
