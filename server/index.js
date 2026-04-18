@@ -7,6 +7,7 @@ import getReportRouter from './api/reports/[id].js';
 import reportsIndexRouter from './api/reports/index.js';
 import ionRoutes from './api/ion/chat.js';
 import dashboardRoutes from './api/dashboard/index.js';
+import trendsRouter from './api/trends/index.js';
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -41,6 +42,7 @@ app.use('/api/reports', getReportRouter);
 app.use('/api/reports', reportsIndexRouter);
 app.use('/api/ion/chat', ionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/trends', trendsRouter);
 
 // Generic Gemini generate endpoint
 app.post('/api/generate', async (req, res) => {
