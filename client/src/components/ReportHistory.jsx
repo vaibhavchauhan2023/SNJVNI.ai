@@ -387,7 +387,7 @@ export default function ReportHistory() {
 
       {/* 4 & 5. Main Report View */}
       {!isComparing && (
-        <div className={viewMode === "Timeline view" ? "relative ml-4 md:ml-8 pl-8 border-l-2 border-[#E2E8F0]" : "grid grid-cols-1 md:grid-cols-2 gap-4"}>
+        <div className={viewMode === "Timeline view" ? "relative ml-[60px] md:ml-[130px] pl-6 md:pl-8 border-l-2 border-[#E2E8F0]" : "grid grid-cols-1 md:grid-cols-2 gap-4"}>
           
           {isLoading ? (
             // Skeleton Loading
@@ -433,10 +433,10 @@ export default function ReportHistory() {
                     {/* Timeline Dot */}
                     <div className={`absolute -left-[41px] top-4 w-[14px] h-[14px] rounded-full border-2 border-white shadow-sm ${statusColors.bg.replace('bg-', 'bg-').replace('100', '500')}`} style={{backgroundColor: statusColors.text.replace('text-[', '').replace(']', '')}}></div>
                     
-                    {/* Date label (mobile left side, desktop floating) */}
-                    <div className="absolute -left-[110px] top-3.5 hidden md:block w-20 text-right">
-                       <p className="text-[12px] font-medium text-[#94A3B8]">{new Date(report.report_date || report.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
-                       <p className="text-[10px] text-[#94A3B8]">{new Date(report.report_date || report.created_at).getFullYear()}</p>
+                    {/* Date label (desktop left side of timeline) */}
+                    <div className="absolute right-[100%] mr-[48px] top-3 hidden md:flex flex-col items-end w-24">
+                       <p className="text-[14px] font-bold text-[#0F172A] whitespace-nowrap">{new Date(report.report_date || report.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
+                       <p className="text-[11px] font-bold text-[#0D9488] bg-[#EAF7F4] px-2 py-0.5 rounded-md mt-1">{new Date(report.report_date || report.created_at).getFullYear()}</p>
                     </div>
 
                     <div 
