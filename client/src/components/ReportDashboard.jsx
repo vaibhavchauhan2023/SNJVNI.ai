@@ -391,43 +391,46 @@ const ReportDashboard = () => {
           {/* Unified scrollable area: Glossary + Chat messages */}
           <div className="flex-1 overflow-y-auto flex flex-col px-4 pb-3 pt-4">
             {/* Glossary */}
-            <h3 className="text-[9px] font-bold text-muted-slate uppercase mb-4" style={{ letterSpacing: '0.08em' }}>Glossary</h3>
-            <div className="space-y-3">
+            <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest pl-1 mb-3">Glossary</h3>
+            <div className="space-y-1">
               {glossary.map((item, idx) => (
-                <div key={idx} className="cursor-pointer" onClick={() => toggleTerm(idx)}>
+                <div key={idx} className="cursor-pointer group flex flex-col pt-1.5 pb-2 px-3 hover:bg-[#F8FAFC] rounded-xl transition-all" onClick={() => toggleTerm(idx)}>
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold text-primary-dark mb-0.5">{item.term}</p>
+                    <p className={`text-[12px] font-bold transition-colors ${expandedTerm === idx ? 'text-[#0F6E56]' : 'text-[#0F172A] group-hover:text-[#0D9488]'}`}>{item.term}</p>
                     {expandedTerm === idx
-                      ? <ChevronUp size={12} className="text-muted-slate shrink-0" />
-                      : <ChevronDown size={12} className="text-muted-slate shrink-0" />
+                      ? <ChevronUp size={14} className="text-[#0F6E56] shrink-0" />
+                      : <ChevronDown size={14} className="text-[#94A3B8] group-hover:text-[#0D9488] shrink-0" />
                     }
                   </div>
                   {expandedTerm === idx && (
-                    <p className="text-[11px] text-muted-slate leading-normal mt-1">{item.definition}</p>
+                    <div className="mt-2 text-[11px] text-[#475569] leading-[1.6] bg-white border border-[#E2E8F0] shadow-sm rounded-lg p-2.5">
+                      {item.definition}
+                    </div>
                   )}
                 </div>
               ))}
             </div>
 
             {/* Chat messages (flow directly below glossary) */}
-            <div className="flex flex-col gap-[10px] mt-4">
+            <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest pl-1 mt-6 mb-3 border-t border-[#E2E8F0] pt-4">ION Chat</h3>
+            <div className="flex flex-col gap-3 px-1">
               {ionMessages.map((msg, i) => (
                 <div
                   key={i}
                   className={
                     msg.role === 'user'
-                      ? 'self-end bg-[#0F6E56] text-white rounded-[12px_12px_4px_12px] px-3 py-2 text-[12px] leading-[1.5] max-w-[85%]'
-                      : 'self-start bg-[#F0FDFA] border border-[#CCFBF1] text-[#0F172A] rounded-[12px_12px_12px_4px] px-3 py-2 text-[12px] leading-[1.5] max-w-[85%]'
+                      ? 'self-end bg-[#0F6E56] text-white rounded-[14px_14px_4px_14px] px-[14px] py-[10px] text-[12px] leading-[1.5] max-w-[90%] shadow-sm'
+                      : 'self-start bg-white border border-[#E2E8F0] shadow-sm text-[#0F172A] rounded-[14px_14px_14px_4px] px-[14px] py-[10px] text-[12px] leading-[1.5] max-w-[90%]'
                   }
                 >
                   {msg.content}
                 </div>
               ))}
               {ionLoading && (
-                <div className="self-start bg-[#F0FDFA] border border-[#CCFBF1] rounded-[12px] px-[14px] py-[10px] flex gap-1 items-center">
-                  <div className="w-[5px] h-[5px] rounded-full bg-[#0D9488]" style={{ animation: 'dotPulse 1.2s infinite', animationDelay: '0s' }}></div>
-                  <div className="w-[5px] h-[5px] rounded-full bg-[#0D9488]" style={{ animation: 'dotPulse 1.2s infinite', animationDelay: '0.2s' }}></div>
-                  <div className="w-[5px] h-[5px] rounded-full bg-[#0D9488]" style={{ animation: 'dotPulse 1.2s infinite', animationDelay: '0.4s' }}></div>
+                <div className="self-start bg-white border border-[#E2E8F0] shadow-sm rounded-[14px] px-[16px] py-[14px] flex gap-1.5 items-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#0D9488]" style={{ animation: 'dotPulse 1.2s infinite', animationDelay: '0s' }}></div>
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#0D9488]" style={{ animation: 'dotPulse 1.2s infinite', animationDelay: '0.2s' }}></div>
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#0D9488]" style={{ animation: 'dotPulse 1.2s infinite', animationDelay: '0.4s' }}></div>
                 </div>
               )}
               <div ref={ionEndRef} />
@@ -435,9 +438,9 @@ const ReportDashboard = () => {
           </div>
 
           {/* Chat input (fixed at bottom of left panel) */}
-          <div className="px-3 py-[10px] border-t border-slate-200 bg-white flex gap-2 items-center shrink-0">
+          <div className="p-3 bg-[#F8FAFC] border-t border-[#E2E8F0] flex gap-2 items-center shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
             <input
-              className="flex-1 h-[36px] bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-[10px] text-[12px] text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-[#0D9488] focus:shadow-[0_0_0_2px_rgba(13,148,136,0.1)] transition-all"
+              className="flex-1 h-[40px] bg-white border border-[#E2E8F0] shadow-sm rounded-xl px-3 text-[13px] text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-[#0D9488] focus:ring-2 focus:ring-[#0D9488]/10 transition-all"
               placeholder="Ask SNJVNI..."
               type="text"
               value={ionInput}
@@ -447,13 +450,13 @@ const ReportDashboard = () => {
             <button
               onClick={sendIonMessage}
               disabled={!ionInput.trim()}
-              className={`w-[32px] h-[32px] rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+              className={`w-[40px] h-[40px] shadow-sm rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                 ionInput.trim()
-                  ? 'bg-[#0F6E56] text-white hover:bg-[#085041] cursor-pointer'
-                  : 'bg-[#E2E8F0] text-[#94A3B8] cursor-not-allowed'
+                  ? 'bg-[#0D9488] text-white hover:bg-[#0b7a70] cursor-pointer'
+                  : 'bg-white border border-[#E2E8F0] text-[#94A3B8] cursor-not-allowed'
               }`}
             >
-              <ArrowUp size={14} />
+              <ArrowUp size={16} />
             </button>
           </div>
         </aside>
@@ -483,32 +486,27 @@ const ReportDashboard = () => {
               </div>
 
               {/* Right: health score + flagged markers */}
-              <div className="flex items-center gap-4">
-                {/* Health score block */}
-                <div className="flex items-center gap-[10px]">
-                  <div
-                    className="w-[44px] h-[44px] rounded-full border-2 flex flex-col items-center justify-center"
-                    style={{ borderColor: getHealthStatusColor(patient.healthStatus) }}
-                  >
-                    <span className="text-[15px] font-bold leading-none" style={{ color: getHealthStatusColor(patient.healthStatus) }}>
-                      {patient.healthScore}
-                    </span>
-                    <span className="text-[9px] text-[#94A3B8] leading-none mt-[1px]">/10</span>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold text-[#94A3B8] uppercase" style={{ letterSpacing: '0.08em' }}>Health Score</p>
-                    <div className={`mt-[2px] inline-block rounded-[10px] px-2 py-[2px] text-[10px] font-semibold ${getHealthBadgeBg(patient.healthStatus)}`}>
-                      {getHealthStatusText(patient.healthStatus)}
-                    </div>
-                  </div>
+              <div className="flex bg-white rounded-2xl shadow-[0_2px_14px_rgba(0,0,0,0.05)] border border-[#E2E8F0] p-1.5 items-center gap-3">
+                {/* Score Badge */}
+                <div
+                  className="w-[52px] h-[52px] rounded-[12px] flex flex-col items-center justify-center shrink-0"
+                  style={{
+                    backgroundColor: `${getHealthStatusColor(patient.healthStatus)}15`,
+                    color: getHealthStatusColor(patient.healthStatus),
+                  }}
+                >
+                  <span className="text-[20px] font-extrabold leading-none tracking-tight">{patient.healthScore}</span>
+                  <span className="text-[8px] font-bold uppercase tracking-wider opacity-80 mt-1">Score</span>
                 </div>
 
-                {/* Report meta block */}
-                <div className="border-l border-[#E2E8F0] pl-4">
-                  <p className="text-[9px] font-bold text-[#94A3B8] uppercase" style={{ letterSpacing: '0.08em' }}>Flagged markers</p>
-                  <p className="text-[13px] font-semibold text-[#0F172A] mt-[1px]">
-                    {report.flaggedCount} of {report.totalMarkers}
-                  </p>
+                {/* Status Block */}
+                <div className="flex flex-col items-start gap-1 pr-3 py-1">
+                  <div className={`px-2 py-[2px] text-[9px] font-bold uppercase tracking-[0.05em] rounded-[6px] ${getHealthBadgeBg(patient.healthStatus)}`}>
+                    {getHealthStatusText(patient.healthStatus)}
+                  </div>
+                  <span className="text-[11px] text-[#64748B] font-medium leading-tight mt-[1px]">
+                    <strong className="text-[#0F172A] font-semibold">{report.flaggedCount}</strong> flags out of {report.totalMarkers}
+                  </span>
                 </div>
               </div>
             </div>
@@ -634,19 +632,19 @@ const ReportDashboard = () => {
           </div>
 
           {/* Visual Risk Stack */}
-          <div className="px-6">
-            <h3 className="text-[10px] font-bold text-muted-slate uppercase tracking-widest mb-5">Risk Magnitude</h3>
-            <div className="space-y-5">
+          <div className="px-5">
+            <h3 className="text-[11px] font-bold text-[#0F172A] mb-4">Risk Magnitude</h3>
+            <div className="space-y-4">
               {riskMagnitude.map((risk, idx) => {
                 const color = getRiskColor(risk.score);
                 return (
-                  <div key={idx}>
-                    <div className="flex justify-between text-[10px] font-bold mb-1.5">
-                      <span className="text-primary-dark uppercase">{risk.system}</span>
-                      <span className={color.text}>{risk.score}/10</span>
+                  <div key={idx} className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 shadow-sm">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[11px] font-bold text-[#0F172A] uppercase tracking-wide">{risk.system}</span>
+                      <span className={`text-[12px] font-bold px-2 py-[2px] rounded uppercase bg-white border border-[#E2E8F0] shadow-sm ${color.text}`}>{risk.score}/10</span>
                     </div>
-                    <div className="w-full h-1 bg-slate-100 rounded-full">
-                      <div className={`h-full ${color.bar} rounded-full`} style={{ width: `${risk.score * 10}%` }}></div>
+                    <div className="w-full h-[6px] bg-[#E2E8F0] rounded-full overflow-hidden">
+                      <div className={`h-full ${color.bar} rounded-full transition-all duration-500`} style={{ width: `${risk.score * 10}%` }}></div>
                     </div>
                   </div>
                 );
@@ -655,16 +653,16 @@ const ReportDashboard = () => {
           </div>
 
           {/* Future Consequences Timeline */}
-          <div className="px-6 mt-8">
-            <h3 className="text-[10px] font-bold text-muted-slate uppercase tracking-widest mb-5">Future Projection</h3>
-            <div className="relative ml-1 space-y-6">
+          <div className="px-5 mt-8">
+            <h3 className="text-[11px] font-bold text-[#0F172A] mb-4">Future Projection</h3>
+            <div className="relative ml-2 space-y-7 border-l-2 border-[#E2E8F0] pb-2">
               {futureProjection.map((proj, idx) => (
-                <div key={idx} className="relative pl-6">
+                <div key={idx} className="relative pl-5">
                   <div
-                    className="absolute left-0 top-1 w-2 h-2 rounded-full"
+                    className="absolute -left-[5px] top-1 w-[8px] h-[8px] rounded-full border border-white box-content shadow-sm"
                     style={{ backgroundColor: getSeverityDotColor(proj.severity) }}
                   ></div>
-                  <p className={`text-[10px] font-bold mb-0.5 uppercase ${getSeverityTextColor(proj.severity)}`}>
+                  <p className={`text-[11px] font-extrabold uppercase mb-1 tracking-wide ${getSeverityTextColor(proj.severity)}`}>
                     {proj.timeframe}
                   </p>
                   <p className="text-[11px] text-secondary-slate">{proj.text}</p>
@@ -674,17 +672,17 @@ const ReportDashboard = () => {
           </div>
 
           {/* Daily Habit Prescriptions */}
-          <div className="px-6 mt-8 pb-6">
-            <h3 className="text-[10px] font-bold text-muted-slate uppercase tracking-widest mb-4">Daily Precision Habits</h3>
-            <div className="grid grid-cols-2 gap-3">
+          <div className="px-5 mt-8 pb-8">
+            <h3 className="text-[11px] font-bold text-[#0F172A] mb-4">Precision Habits</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {habits.map((habit) => {
                 const IconComp = habitIconMap[habit.icon] || Leaf;
                 return (
-                  <div key={habit.id} className="p-3 bg-[#F8FAFC] rounded-lg flex flex-col items-center text-center">
-                    <div className="w-8 h-8 bg-[#F0FDFA] rounded-full flex items-center justify-center mb-2">
-                      <IconComp size={14} className="text-brand-teal" />
+                  <div key={habit.id} className="p-3 bg-white border border-[#E2E8F0] shadow-sm rounded-xl flex flex-col items-center text-center transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:-translate-y-0.5">
+                    <div className="w-[36px] h-[36px] bg-[#F0FDFA] rounded-full flex items-center justify-center mb-3">
+                      <IconComp size={16} className="text-[#0D9488]" />
                     </div>
-                    <p className="text-[9px] font-bold text-primary-dark leading-tight uppercase">{habit.label}</p>
+                    <p className="text-[10px] font-bold text-[#0F172A] leading-relaxed uppercase tracking-wide">{habit.label}</p>
                   </div>
                 );
               })}
