@@ -233,7 +233,7 @@ const Dashboard = () => {
                 {/* Left */}
                 <div>
                   <h1 className="text-[26px] font-bold text-[#0F172A] leading-tight">
-                    {getGreeting()}, {data.user.firstName}
+                    {getGreeting()}, {data.user.firstName !== 'User' ? data.user.firstName : (user?.user_metadata?.full_name?.split(' ')[0] || user?.user_metadata?.first_name || user?.user_metadata?.name?.split(' ')[0] || 'User')}
                   </h1>
                   {data.hasReports && data.latestReport ? (
                     <p className="text-[13px] text-[#94A3B8] mt-1">
@@ -249,25 +249,26 @@ const Dashboard = () => {
                 {/* Right */}
                 {data.hasReports && data.latestReport ? (
                   <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-                    <div className="flex items-center gap-4">
-                      {/* Score Circle */}
+                    <div className="flex bg-white rounded-2xl shadow-[0_2px_14px_rgba(0,0,0,0.06)] border border-[#E2E8F0] p-1.5 items-center gap-3">
+                      {/* Score Badge */}
                       <div
-                        className="w-[72px] h-[72px] rounded-full border-[3px] flex flex-col items-center justify-center shrink-0"
-                        style={{ borderColor: getStatusColor(data.latestReport.status) }}
+                        className="w-[60px] h-[60px] rounded-[12px] flex flex-col items-center justify-center shrink-0"
+                        style={{
+                          backgroundColor: `${getStatusColor(data.latestReport.status)}15`,
+                          color: getStatusColor(data.latestReport.status),
+                        }}
                       >
-                        <span className="text-[22px] font-bold leading-none" style={{ color: getStatusColor(data.latestReport.status) }}>
-                          {data.latestReport.overallScore}
-                        </span>
-                        <span className="text-[10px] text-[#94A3B8] leading-none mt-0.5">/10</span>
+                        <span className="text-[24px] font-extrabold leading-none tracking-tight">{data.latestReport.overallScore}</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider opacity-80 mt-1">Score</span>
                       </div>
 
                       {/* Status Block */}
-                      <div className="flex flex-col items-start gap-1">
-                        <div className={`px-3 py-1 text-[12px] font-semibold rounded-[20px] border ${getStatusBg(data.latestReport.status)}`}>
+                      <div className="flex flex-col items-start gap-1 pr-4 py-1">
+                        <div className={`px-2.5 py-[3px] text-[10px] font-bold uppercase tracking-[0.05em] rounded-[6px] border ${getStatusBg(data.latestReport.status)}`}>
                           {getStatusText(data.latestReport.status)}
                         </div>
-                        <span className="text-[12px] text-[#94A3B8]">
-                          {data.latestReport.flaggedCount} markers flagged · {data.latestReport.totalMarkers} total
+                        <span className="text-[12px] text-[#64748B] font-medium leading-tight mt-0.5">
+                          <strong className="text-[#0F172A] font-semibold">{data.latestReport.flaggedCount}</strong> flags out of {data.latestReport.totalMarkers}
                         </span>
                       </div>
                     </div>
