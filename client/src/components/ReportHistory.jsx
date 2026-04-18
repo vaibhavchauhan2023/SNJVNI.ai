@@ -178,10 +178,6 @@ export default function ReportHistory() {
           <h1 className="text-[22px] font-bold text-[#0F172A]">Report History</h1>
           <p className="text-[13px] text-[#94A3B8] mt-1">All past reports · Filter · Compare · Track over time</p>
         </div>
-        <button onClick={() => navigate('/analyze')} className="mt-4 md:mt-0 flex items-center gap-2 bg-[#0F6E56] text-white rounded-[10px] px-5 py-2.5 text-[14px] font-semibold hover:bg-[#085041] hover:-translate-y-[1px] transition-all">
-          <UploadCloud size={18} />
-          Upload new report
-        </button>
       </header>
 
       {/* 2. Summary Strip */}
